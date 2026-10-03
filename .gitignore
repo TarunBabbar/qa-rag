@@ -15,3 +15,8 @@ ui/dist/
 
 # the sample Jenkins console logs are corpus data; the repo-wide *.log rule would drop them
 !data/06_Jenkins_Logs/*.log
+
+# The two framework repos are corpus data, not app code. Keeping them out of the repo
+# stops them looking like deployable apps (the Playwright repo has its own Dockerfile).
+# Re-clone them into data/07_Source_Codes/ before ingesting the code sources.
+data/07_Source_Codes/

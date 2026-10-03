@@ -86,6 +86,16 @@ data/
 
 `sources.yaml` maps each folder to its chunker. `_`-prefixed files are never ingested.
 
+`data/07_Source_Codes/` (the Selenium and Playwright sample frameworks) is **not committed** —
+they are corpus data, not app code, and keeping them out avoids Vercel mistaking them for a
+deployable app. They are still on your machine if you cloned them; on a fresh clone, fetch
+the two repos into `data/07_Source_Codes/` before ingesting code/RTM modes:
+
+```bash
+git clone https://github.com/PramodDutta/ATB13xSeleniumAdvanceFramework data/07_Source_Codes/ATB13xSeleniumAdvanceFramework
+git clone https://github.com/PramodDutta/AdvancePlaywrightFramework1x data/07_Source_Codes/AdvancePlaywrightFramework1x
+```
+
 ## Chunking rules (per source)
 
 The rule: **chunk along the unit a QA engineer asks about**, never by character count alone.
