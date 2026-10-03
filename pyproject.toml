@@ -1,3 +1,24 @@
+# PEP 621 metadata. Vercel's Python runtime uses `uv`, which refuses to lock a
+# pyproject.toml without a `[project]` table. `package = false` keeps this a
+# dependencies-only project (nothing is built); keep `dependencies` in sync with
+# requirements.txt, which is what local `pip install` uses.
+[project]
+name = "qabuddy"
+version = "1.0.0"
+description = "Multi-source hybrid RAG for QA engineers"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "httpx>=0.27",
+  "python-dotenv>=1.0",
+  "pyyaml>=6.0",
+  "pinecone>=5",
+]
+
+[tool.uv]
+package = false
+
 # Tells Vercel where the FastAPI app lives and how to serve the web UI.
 # The whole project is one Vercel Function (Python runtime); ingestion runs locally.
 
