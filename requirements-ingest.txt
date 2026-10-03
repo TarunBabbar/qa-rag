@@ -1,0 +1,9 @@
+# Local-only: chunking and ingestion. Not needed to serve queries, not installed on Vercel.
+
+# --- parsing ---
+pypdf>=5.0
+openpyxl>=3.1
+tree-sitter>=0.23
+tree-sitter-java>=0.23
+tree-sitter-typescript>=0.23
+snowballstemmer>=2.2

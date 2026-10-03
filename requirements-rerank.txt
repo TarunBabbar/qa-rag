@@ -1,0 +1,3 @@
+# Local-only: the in-process cross-encoder reranker (RERANK_PROVIDER=local).
+# Hosted deployments use RERANK_PROVIDER=jina instead and do not install this.
+sentence-transformers>=3.0

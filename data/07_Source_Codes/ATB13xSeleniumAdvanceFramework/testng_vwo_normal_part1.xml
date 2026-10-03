@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="All Test Suite">
+    <test verbose="2" preserve-order="true" name="/Users/promode/IdeaProjects/ATB13xSeleniumAdvanceFramework">
+        <classes>
+            <class name="com.thetestingacademy.tests.vwo.pageObjectModelTC.TestVWOLogin_01_Normal_POM">
+                <methods>
+                    <include name="test_negative_vwo_login"/>
+                    <include name="testLoginPositiveVWO"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+</suite>

@@ -1,0 +1,10 @@
+# Tells Vercel where the FastAPI app lives and how to serve the web UI.
+# The whole project is one Vercel Function (Python runtime); ingestion runs locally.
+
+[tool.vercel]
+entrypoint = "qabuddy.vercel:app"
+
+[tool.vercel.fastapi.static]
+# Serve the built UI through the function (identical to local); disable CDN
+# promotion so `/` and `/assets/*` behave the same in both places.
+cdn = false

@@ -1,0 +1,15 @@
+# Serverless deploy: only the query path + the built UI are needed.
+# Ingestion runs locally; vectors live in Pinecone and the answer comes from OpenRouter.
+.venv/
+.bin/
+.qdrant/
+.index/
+data/
+tests/
+eval/
+deploy/
+docs/
+ui/node_modules/
+ui/dist-demo/
+*.prompt.md
+.env

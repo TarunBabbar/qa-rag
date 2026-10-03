@@ -1,0 +1,17 @@
+# secrets
+.env
+# local runtime state
+.venv/
+.bin/
+.index/
+__pycache__/
+*.pyc
+.pytest_cache/
+# ui build
+ui/node_modules/
+ui/dist/
+.vercel/
+.DS_Store
+
+# the sample Jenkins console logs are corpus data; the repo-wide *.log rule would drop them
+!data/06_Jenkins_Logs/*.log
