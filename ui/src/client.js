@@ -47,17 +47,32 @@ const live = {
   ingest: (body) => json('/api/ingest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
   ingestStatus: () => json('/api/ingest/status'),
   async *chat({ question, mode, sources, history, signal }) {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, mode, sources, history }),
-      signal,
-    });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      throw new Error(d.detail || `HTTP ${res.status}`);
+    const body = JSON.stringify({ question, mode, sources, history });
+    const headers = { 'Content-Type': 'application/json' };
+    let yielded = false;
+    try {
+      const res = await fetch('/api/chat', { method: 'POST', headers, body, signal });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.detail || `HTTP ${res.status}`);
+      }
+      for await (const evt of sse(res)) {
+        yielded = true;
+        yield evt;
+      }
+      return;
+    } catch (e) {
+      // Some serverless platforms buffer SSE. If nothing streamed yet, fall back
+      // to the non-streaming endpoint so the hosted app still answers.
+      if (e?.name === 'AbortError' || yielded) throw e;
+      yield { type: 'status', message: 'Streaming unavailable; fetching the answer' };
+      const r = await fetch('/api/answer', { method: 'POST', headers, body, signal });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.detail || d.error || `HTTP ${r.status}`);
+      if (d.retrieval) yield { type: 'retrieval', mode: d.mode, retrieval: d.retrieval };
+      yield { type: 'token', text: d.answer || '' };
+      yield { type: 'done', answer: d.answer || '', citations: d.citations, usage: d.usage, timings: d.timings, model: d.model };
     }
-    yield* sse(res);
   },
 };
 
