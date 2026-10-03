@@ -8,3 +8,8 @@ entrypoint = "qabuddy.vercel:app"
 # Serve the built UI through the function (identical to local); disable CDN
 # promotion so `/` and `/assets/*` behave the same in both places.
 cdn = false
+
+[tool.vercel.scripts]
+# Build hook for the FastAPI runtime. Vercel applies vercel.json's buildCommand too;
+# this covers the multi-app "Services" import, where that command is not run.
+build = "cd ui && npm install && npm run build"
