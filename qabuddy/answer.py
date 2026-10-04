@@ -52,22 +52,22 @@ MODES: dict[str, Mode] = {
             "ask", "Ask anything", "💬", "Onboarding and knowledge-base questions across every source",
             None, 6, 1600, "",
             [
-                "What is the flaky test policy and what is the retry limit?",
-                "Who do I ask about Jenkins agents and IP allowlists?",
-                "What does VWO-26 describe and is there a duplicate?",
-                "How do I run the Selenium suite locally?",
+                "What test cases cover the booking flow?",
+                "How do I run the API suite locally?",
+                "Which bugs are linked to the booking tests?",
+                "What does the room inventory story require?",
             ],
         ),
         Mode(
-            "rca", "Failure analysis (RCA)", "🧯", "Correlate Jenkins failures with code, bugs and meeting decisions",
+            "rca", "Failure analysis (RCA)", "🧯", "Correlate test failures with code, bugs and Jira tickets",
             ["jira", "github"], 8, 2000,
             "Structure the answer as: **Symptom** (exact error, build, test), **Root cause** (evidence with citations; "
             "say whether it is a product bug, a test/framework problem or an environment problem), **Flaky or real?** "
             "(retry evidence), **Related tickets**, **Fix and next steps** (concrete, with file and line where the sources show them).",
             [
-                "Why did vwo-selenium-regression #142 fail?",
-                "Is testLoginPositiveVWO flaky? Show the evidence across builds.",
-                "Why does the checkout test see 2 cart rows in playwright-e2e #88?",
+                "Why did the negative auth test fail?",
+                "Is the booking creation test flaky?",
+                "Which bug explains the 500 on a booking with no lastname?",
             ],
             {"jira": 2},
         ),
@@ -82,9 +82,9 @@ MODES: dict[str, Mode] = {
             "Mapping a requirement to a module by matching feature and module names is expected: do it, and mark such "
             "mappings (inferred). Only call something a gap when no module or test case covers it.",
             [
-                "Which PRD features have no test cases?",
-                "Draft 4 test cases for Heatmaps & Session Recordings (FR4) in our format",
-                "Review LOGIN-002 and suggest how to make it sharper",
+                "Which booking features have no test cases?",
+                "Draft 4 API test cases for room availability in our format",
+                "Review TC-BOOK-006 and suggest how to make it sharper",
             ],
             {"jira": 3},
         ),
@@ -95,22 +95,22 @@ MODES: dict[str, Mode] = {
             "justified by the team's triage rules in the sources, **Affected test cases** (IDs), **Suggested owner / component**. "
             "If the triage rules are not in the sources, say so instead of inventing them.",
             [
-                "Is VWO-33 a duplicate? Set severity and priority.",
-                "Triage QAB-103 using our triage rules",
-                "Which open bugs affect login test cases?",
+                "Triage QAB-72 using our triage rules",
+                "Which open bugs affect booking test cases?",
+                "Set severity and priority for the double-booking bug",
             ],
             {"jira": 2},
         ),
         Mode(
-            "code", "Framework coding help", "🛠️", "Answers and code in your own Selenium and Playwright frameworks",
+            "code", "Framework coding help", "🛠️", "Answers and code from your own Playwright automation framework",
             ["github"], 7, 2600,
             "Answer at the level of THIS team's frameworks: reuse their classes, helpers, fixtures, locators and naming "
             "exactly as they appear in the sources, and cite the files. Point out anti-patterns visible in the sources "
             "(for example hard sleeps). When writing new code, say which existing file it follows.",
             [
-                "How do I wait for an element in the Selenium framework?",
-                "Write a Playwright test that adds two items to the cart using our page objects and fixtures",
-                "How does RetryAnalyzer work and what is the retry limit?",
+                "How is the API client structured in our Playwright framework?",
+                "Write a Playwright API test that deletes a booking, reusing our fixtures",
+                "How do our tests tag the Jira test-case ids?",
             ],
         ),
         Mode(
@@ -121,8 +121,8 @@ MODES: dict[str, Mode] = {
             "by matching feature and module names is expected: do it and mark the cell (inferred). Write 'No test case "
             "found' where no module covers the requirement. Base every cell on the sources.",
             [
-                "Build an RTM for PRD section 6 Functional Requirements",
-                "Trace FR1 (A/B, Split & Multivariate Testing) to its test cases, automation status and open bugs",
+                "Build an RTM for the booking stories",
+                "Trace the room inventory story to its test cases, automation status and open bugs",
             ],
             {"jira": 4},
         ),

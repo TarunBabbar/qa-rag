@@ -179,7 +179,7 @@ export default function App() {
                 <p>
                   {mode && mode.id !== 'ask'
                     ? mode.description
-                    : 'One question, one cited answer, grounded in your Selenium and Playwright frameworks, test cases, Jira bugs, requirements, meeting notes, Lucid charts and Jenkins logs.'}
+                    : 'One question, one cited answer, grounded in your Jira stories, test cases and bugs plus your Playwright automation code.'}
                 </p>
                 <div className="examples">
                   {examples.map(({ q, m }) => (
