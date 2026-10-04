@@ -20,3 +20,6 @@ ui/dist/
 # stops them looking like deployable apps (the Playwright repo has its own Dockerfile).
 # Re-clone them into data/07_Source_Codes/ before ingesting the code sources.
 data/07_Source_Codes/
+
+# transient staging for API-backed sources (jira/github); created and deleted per ingest run
+data/_staging/

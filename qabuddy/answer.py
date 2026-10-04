@@ -60,7 +60,7 @@ MODES: dict[str, Mode] = {
         ),
         Mode(
             "rca", "Failure analysis (RCA)", "🧯", "Correlate Jenkins failures with code, bugs and meeting decisions",
-            ["jenkins", "jira", "meeting_notes", "selenium", "playwright", "lucid", "company_docs"], 8, 2000,
+            ["jira", "github"], 8, 2000,
             "Structure the answer as: **Symptom** (exact error, build, test), **Root cause** (evidence with citations; "
             "say whether it is a product bug, a test/framework problem or an environment problem), **Flaky or real?** "
             "(retry evidence), **Related tickets**, **Fix and next steps** (concrete, with file and line where the sources show them).",
@@ -69,11 +69,11 @@ MODES: dict[str, Mode] = {
                 "Is testLoginPositiveVWO flaky? Show the evidence across builds.",
                 "Why does the checkout test see 2 cart rows in playwright-e2e #88?",
             ],
-            {"jenkins": 2},
+            {"jira": 2},
         ),
         Mode(
             "test_design", "Test design & gaps", "🧪", "Compare requirements with test cases, find gaps, draft new cases",
-            ["requirements", "test_cases", "jira", "company_docs", "meeting_notes"], 8, 2400,
+            ["jira"], 8, 2400,
             "Compare the requirement sections with the test cases in the sources. First list what is covered "
             "(requirement -> test case IDs). Then give the gaps as a table: | Requirement (doc §) | Missing scenario | "
             "Suggested priority | Positive/Negative |. When asked to write test cases, use the team's format: ID "
@@ -86,11 +86,11 @@ MODES: dict[str, Mode] = {
                 "Draft 4 test cases for Heatmaps & Session Recordings (FR4) in our format",
                 "Review LOGIN-002 and suggest how to make it sharper",
             ],
-            {"requirements": 3, "test_cases": 3},
+            {"jira": 3},
         ),
         Mode(
             "triage", "Bug triage", "🐞", "Duplicates, severity, priority and affected tests for a ticket",
-            ["jira", "test_cases", "requirements", "company_docs", "meeting_notes", "jenkins"], 7, 1600,
+            ["jira"], 7, 1600,
             "Structure the answer as: **Summary**, **Duplicates / related** (ticket keys), **Severity** and **Priority** "
             "justified by the team's triage rules in the sources, **Affected test cases** (IDs), **Suggested owner / component**. "
             "If the triage rules are not in the sources, say so instead of inventing them.",
@@ -99,11 +99,11 @@ MODES: dict[str, Mode] = {
                 "Triage QAB-103 using our triage rules",
                 "Which open bugs affect login test cases?",
             ],
-            {"jira": 2, "company_docs": 1},
+            {"jira": 2},
         ),
         Mode(
             "code", "Framework coding help", "🛠️", "Answers and code in your own Selenium and Playwright frameworks",
-            ["selenium", "playwright", "company_docs"], 7, 2600,
+            ["github"], 7, 2600,
             "Answer at the level of THIS team's frameworks: reuse their classes, helpers, fixtures, locators and naming "
             "exactly as they appear in the sources, and cite the files. Point out anti-patterns visible in the sources "
             "(for example hard sleeps). When writing new code, say which existing file it follows.",
@@ -115,7 +115,7 @@ MODES: dict[str, Mode] = {
         ),
         Mode(
             "rtm", "Traceability (RTM)", "🧭", "Requirements -> test cases -> automation -> open bugs",
-            ["requirements", "test_cases", "jira"], 10, 2400,
+            ["jira"], 10, 2400,
             "Output a traceability matrix: | Requirement (doc §, ID) | Test case IDs | Automated? | Open bugs | Coverage |. "
             "Use the test case repository summary to see every module and its ID range. Mapping a requirement to a module "
             "by matching feature and module names is expected: do it and mark the cell (inferred). Write 'No test case "
@@ -124,7 +124,7 @@ MODES: dict[str, Mode] = {
                 "Build an RTM for PRD section 6 Functional Requirements",
                 "Trace FR1 (A/B, Split & Multivariate Testing) to its test cases, automation status and open bugs",
             ],
-            {"requirements": 4, "test_cases": 4},
+            {"jira": 4},
         ),
     ]
 }

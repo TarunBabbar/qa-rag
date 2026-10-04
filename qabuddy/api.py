@@ -89,7 +89,7 @@ def list_sources() -> list[dict]:
     out = []
     for src in sources():
         files_on_disk = 0
-        if src.phase == 1 and iter_files is not None:
+        if src.phase == 1 and src.provider == "local" and iter_files is not None:
             try:
                 files_on_disk = sum(1 for _ in iter_files(src))
             except Exception:

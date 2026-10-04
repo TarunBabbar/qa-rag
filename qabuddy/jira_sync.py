@@ -17,7 +17,7 @@ import re
 import httpx
 import yaml
 
-from .config import settings, source_by_id
+from .config import ROOT, settings, source_by_id
 
 FIELDS = "summary,description,status,priority,issuetype,labels,components,created,updated,reporter,assignee,comment,project"
 
@@ -96,17 +96,17 @@ def ticket_markdown(issue: dict, base_url: str) -> str:
     return "\n".join(parts) + "\n"
 
 
-def sync(jql: str | None = None, max_issues: int = 1000) -> dict:
+def fetch_issues(jql: str, max_issues: int = 1000):
+    """Yield Jira issues (dicts) matching a JQL, paging through the search API.
+
+    Used both by `sync` (writes files) and by the ingest fetch layer (in memory).
+    """
     s = settings()
     if not s.jira_configured:
         raise RuntimeError("Jira is not configured. Set JIRA_BASE_URL, JIRA_EMAIL and JIRA_API_TOKEN in .env.")
-    jql = jql or s.jira_jql
-    src = source_by_id("jira")
-    out_dir = src.path
-    out_dir.mkdir(parents=True, exist_ok=True)
-    written, token = [], None
     with httpx.Client(auth=(s.jira_email, s.jira_api_token), timeout=30, headers={"Accept": "application/json"}) as http:
-        while len(written) < max_issues:
+        token, n = None, 0
+        while n < max_issues:
             params = {"jql": jql, "fields": FIELDS, "maxResults": 100}
             if token:
                 params["nextPageToken"] = token
@@ -116,10 +116,22 @@ def sync(jql: str | None = None, max_issues: int = 1000) -> dict:
             r.raise_for_status()
             data = r.json()
             for issue in data.get("issues", []):
-                safe = re.sub(r"[^A-Z0-9-]", "_", issue["key"])
-                (out_dir / f"{safe}.md").write_text(ticket_markdown(issue, s.jira_base_url), encoding="utf-8")
-                written.append(issue["key"])
+                yield issue
+                n += 1
             token = data.get("nextPageToken")
             if data.get("isLast", True) or not token:
                 break
+
+
+def sync(jql: str | None = None, max_issues: int = 1000) -> dict:
+    s = settings()
+    jql = jql or s.jira_jql
+    src = source_by_id("jira")
+    out_dir = (src.path if src and src.path else ROOT / "data" / "01_JIRA_Tickets")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    written: list[str] = []
+    for issue in fetch_issues(jql, max_issues):
+        safe = re.sub(r"[^A-Z0-9-]", "_", issue["key"])
+        (out_dir / f"{safe}.md").write_text(ticket_markdown(issue, s.jira_base_url), encoding="utf-8")
+        written.append(issue["key"])
     return {"jql": jql, "written": len(written), "keys": written[:50]}

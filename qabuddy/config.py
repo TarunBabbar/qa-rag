@@ -46,14 +46,19 @@ def is_vercel() -> bool:
 class Source:
     id: str
     label: str
-    path: Path
     kind: str
+    path: Path | None = None
+    provider: str = "local"  # local | jira | github
+    repo: str = ""
+    ref: str = "main"
     description: str = ""
     phase: int = 1
 
     @property
     def rel_path(self) -> str:
-        return self.path.relative_to(ROOT).as_posix()
+        if self.path is not None:
+            return self.path.relative_to(ROOT).as_posix()
+        return f"{self.provider}:{self.repo or self.id}"
 
 
 @dataclass(frozen=True)
@@ -139,12 +144,16 @@ def sources() -> tuple[Source, ...]:
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     out = []
     for s in raw["sources"]:
+        rel = s.get("path")
         out.append(
             Source(
                 id=s["id"],
                 label=s["label"],
-                path=(ROOT / s["path"]).resolve(),
                 kind=s["kind"],
+                path=(ROOT / rel).resolve() if rel else None,
+                provider=s.get("provider", "local"),
+                repo=s.get("repo", ""),
+                ref=s.get("ref", "main"),
                 description=s.get("description", ""),
                 phase=int(s.get("phase", 1)),
             )

@@ -29,7 +29,7 @@ KINDS: dict[str, tuple[set[str], Chunker]] = {
 
 def iter_files(source: Source) -> Iterator[Path]:
     """Files a source contributes. `_`-prefixed and hidden files are notes, not content."""
-    if source.phase > 1 or not source.path.exists():
+    if source.phase > 1 or source.path is None or not source.path.exists():
         return
     if source.kind == "code":
         yield from iter_repo_files(source.path)

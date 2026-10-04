@@ -1,0 +1,1049 @@
+# QABuddy seed data for the QAB Jira project.
+# Target application: restful-booker-platform (https://automationintesting.online)
+# Applied by tools/jira_seed.py (idempotent: matches on summary).
+
+stories:
+  - id: RBP-BOOK
+    module: Booking
+    priority: P0
+    summary: "Public booking: a guest can book an available room"
+    description: "As a guest I can search for an available room for my dates and complete a booking so that I have a reservation."
+    acceptance:
+      - "The booking form accepts first name, last name, email, phone and dates."
+      - "A successful booking returns a booking id and is visible to the admin."
+      - "An invalid submission shows a field-level error and creates no booking."
+
+  - id: RBP-DATES
+    module: Booking
+    priority: P0
+    summary: "Booking date rules are enforced"
+    description: "Booking dates must be valid: check-out after check-in, no past dates, and a maximum stay."
+    acceptance:
+      - "Check-out on or before check-in is rejected."
+      - "A check-in in the past is rejected."
+      - "The error message names the offending field."
+
+  - id: RBP-AVAIL
+    module: Rooms
+    priority: P0
+    summary: "Room availability is derived from existing bookings"
+    description: "A room is offered only when it has no overlapping booking for the requested date range."
+    acceptance:
+      - "A room with an overlapping booking is not returned for those dates."
+      - "A room becomes available again once its bookings end."
+      - "Overlap at the boundary dates (same check-in or check-out) is handled correctly."
+
+  - id: RBP-INV
+    module: Rooms
+    priority: P1
+    summary: "Admin can manage room inventory"
+    description: "Admins can create, update and delete rooms, and see the current inventory."
+    acceptance:
+      - "A new room appears in the room list after creation."
+      - "Editing a room updates the list."
+      - "Deleting a room removes it from the list."
+
+  - id: RBP-AUTH
+    module: Auth
+    priority: P0
+    summary: "Admin login protects the admin area"
+    description: "Only an authenticated admin can reach the admin pages and admin APIs."
+    acceptance:
+      - "Valid credentials (admin/password) return a token and open the admin area."
+      - "Invalid credentials are rejected with an error and no token."
+      - "Admin pages and admin APIs require the token."
+
+  - id: RBP-MSG
+    module: Messages
+    priority: P1
+    summary: "Guest enquiries reach the admin inbox"
+    description: "A guest can send an enquiry; the admin can read and delete it."
+    acceptance:
+      - "The contact form creates a message visible in the admin inbox."
+      - "Reading a message marks it as read."
+      - "Deleting a message removes it from the inbox."
+
+  - id: RBP-MOD
+    module: Messages
+    priority: P1
+    summary: "Message input is validated and sanitised"
+    description: "Message fields are validated and any HTML/script is neutralised before display."
+    acceptance:
+      - "Required fields are enforced."
+      - "Email and phone are format-checked."
+      - "Script in a message is not executed when the admin views it."
+
+  - id: RBP-REP
+    module: Report
+    priority: P2
+    summary: "Occupancy report summarises bookings and messages"
+    description: "The report page shows the current rooms, bookings and messages."
+    acceptance:
+      - "The report lists rooms with their bookings."
+      - "Message counts are shown."
+      - "The report reflects changes after a booking is made."
+
+  - id: RBP-BRAND
+    module: Branding
+    priority: P2
+    summary: "Site branding is configurable"
+    description: "An admin can change the site name and contact details, and the public site reflects them."
+    acceptance:
+      - "Updated branding appears on the public site."
+      - "Invalid values are rejected."
+
+  - id: RBP-NFR
+    module: Cross
+    priority: P1
+    summary: "Non-functional: security, accessibility and resilience"
+    description: "The site should be safe, usable by keyboard/screen-reader, and handle bad input without a 500."
+    acceptance:
+      - "Malformed input returns 4xx, not 5xx."
+      - "Admin endpoints reject unauthenticated calls."
+      - "Key pages are reachable by keyboard and have labelled fields."
+
+tests:
+  # ---------------- Booking (16) ----------------
+  - id: TC-BOOK-001
+    module: Booking
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-BOOK
+    summary: "TC: Booking API creates a valid booking"
+    precondition: "RBP API is reachable and at least one room exists."
+    steps:
+      - "POST /booking with valid guest details and a future date range"
+      - "Assert HTTP 200 and a bookingid in the response"
+      - "GET /booking/{id} and assert the details match"
+    expected: "The booking is created, returned with an id, and retrievable."
+  - id: TC-BOOK-002
+    module: Booking
+    type: UI
+    priority: P0
+    automated: true
+    covers: RBP-BOOK
+    summary: "TC: UI booking flow completes for an available room"
+    precondition: "A room is available for the chosen dates."
+    steps:
+      - "Open the home page and pick an available date range"
+      - "Select a room and fill the booking form"
+      - "Submit and assert the confirmation is shown"
+    expected: "The guest sees a confirmation and the booking exists in the admin area."
+  - id: TC-BOOK-003
+    module: Booking
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-DATES
+    summary: "TC: Booking API rejects checkout before checkin"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /booking with checkout earlier than checkin"
+      - "Assert the request is rejected (4xx) and no booking id is returned"
+    expected: "The booking is rejected with a 4xx error and a message naming the dates."
+  - id: TC-BOOK-004
+    module: Booking
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-DATES
+    summary: "TC: Booking API rejects a check-in in the past"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /booking with checkin in the past"
+      - "Assert 4xx and no booking created"
+    expected: "Past dates are rejected."
+  - id: TC-BOOK-005
+    module: Booking
+    type: UI
+    priority: P1
+    automated: true
+    covers: RBP-BOOK
+    summary: "TC: Booking form shows field errors on empty submit"
+    precondition: "Home page is open with a room selected."
+    steps:
+      - "Submit the booking form without filling required fields"
+      - "Assert inline errors are shown for first name, last name, email and phone"
+    expected: "Each invalid field shows an error and no booking is created."
+  - id: TC-BOOK-006
+    module: Booking
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-AVAIL
+    summary: "TC: Booking API rejects a room already booked for the dates"
+    precondition: "A room has an existing booking for the date range."
+    steps:
+      - "POST /booking for the same room and overlapping dates"
+      - "Assert the request is rejected"
+    expected: "Overlapping bookings are rejected."
+  - id: TC-BOOK-007
+    module: Booking
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-BOOK
+    summary: "TC: Booking API validates the email format"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /booking with an invalid email"
+      - "Assert 4xx and an email error"
+    expected: "Malformed emails are rejected."
+  - id: TC-BOOK-008
+    module: Booking
+    type: UI
+    priority: P1
+    automated: false
+    covers: RBP-BOOK
+    summary: "TC: Booking form is usable with the keyboard only"
+    precondition: "Home page is open."
+    steps:
+      - "Tab through the booking form and fill it without a mouse"
+      - "Submit with Enter"
+    expected: "Every field is reachable and the form submits."
+  - id: TC-BOOK-009
+    module: Booking
+    type: API
+    priority: P2
+    automated: true
+    covers: RBP-DATES
+    summary: "TC: Booking API accepts a same-day check-in and check-out next day"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /booking with checkin today and checkout tomorrow"
+      - "Assert 200 and a booking id"
+    expected: "A one-night booking is accepted."
+  - id: TC-BOOK-010
+    module: Booking
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-AVAIL
+    summary: "TC: Boundary dates - checkout of booking A equals checkin of booking B"
+    precondition: "Room has a booking ending on date D."
+    steps:
+      - "POST a new booking for the same room starting on D"
+      - "Assert the new booking is accepted"
+    expected: "Back-to-back bookings are allowed at the boundary."
+  - id: TC-BOOK-011
+    module: Booking
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-BOOK
+    summary: "TC: Booking appears in the admin bookings list"
+    precondition: "A booking has just been created via the API."
+    steps:
+      - "Authenticate as admin"
+      - "GET /booking and assert the new booking is present with the correct room"
+    expected: "The admin list includes the new booking."
+  - id: TC-BOOK-012
+    module: Booking
+    type: UI
+    priority: P1
+    automated: true
+    covers: RBP-BOOK
+    summary: "TC: Booking summary shows the number of nights and total"
+    precondition: "A valid date range is selected."
+    steps:
+      - "Select check-in and check-out dates"
+      - "Assert the summary shows the correct night count"
+    expected: "The night count equals the difference in days."
+  - id: TC-BOOK-013
+    module: Booking
+    type: API
+    priority: P2
+    automated: true
+    covers: RBP-BOOK
+    summary: "TC: Booking API accepts an optional deposit flag"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /booking with depositpaid true"
+      - "GET the booking and assert depositpaid is true"
+    expected: "The deposit flag round-trips."
+  - id: TC-BOOK-014
+    module: Booking
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-NFR
+    summary: "TC: Booking API returns 4xx (not 500) for malformed JSON"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /booking with an invalid JSON body"
+      - "Assert the response is 4xx"
+    expected: "Malformed input is handled gracefully."
+  - id: TC-BOOK-015
+    module: Booking
+    type: UI
+    priority: P2
+    automated: false
+    covers: RBP-BRAND
+    summary: "TC: Booking page shows the configured site name"
+    precondition: "Branding has been set by an admin."
+    steps:
+      - "Open the public booking page"
+      - "Assert the header shows the configured site name"
+    expected: "Branding is reflected on the booking page."
+  - id: TC-BOOK-016
+    module: Booking
+    type: API
+    priority: P2
+    automated: true
+    covers: RBP-BOOK
+    summary: "TC: Booking API rejects a missing last name"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /booking without lastname"
+      - "Assert 4xx"
+    expected: "Missing required fields are rejected."
+
+  # ---------------- Rooms (12) ----------------
+  - id: TC-ROOM-001
+    module: Rooms
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-INV
+    summary: "TC: Room API creates a room"
+    precondition: "Authenticated as admin."
+    steps:
+      - "POST /room with a unique room name and price"
+      - "Assert 200 and a roomid"
+      - "GET /room and assert the room is listed"
+    expected: "The room is created and listed."
+  - id: TC-ROOM-002
+    module: Rooms
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-INV
+    summary: "TC: Room API rejects an unauthenticated create"
+    precondition: "No auth token."
+    steps:
+      - "POST /room without a token"
+      - "Assert 401/403"
+    expected: "Unauthenticated room creation is rejected."
+  - id: TC-ROOM-003
+    module: Rooms
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-INV
+    summary: "TC: Room API updates a room"
+    precondition: "A room exists."
+    steps:
+      - "PUT /room/{id} with a new price"
+      - "GET /room/{id} and assert the price changed"
+    expected: "Room updates are persisted."
+  - id: TC-ROOM-004
+    module: Rooms
+    type: UI
+    priority: P1
+    automated: true
+    covers: RBP-INV
+    summary: "TC: Admin can create a room from the UI"
+    precondition: "Logged in as admin."
+    steps:
+      - "Open Admin > Rooms and add a room"
+      - "Assert the new room appears in the list"
+    expected: "The UI creates the room."
+  - id: TC-ROOM-005
+    module: Rooms
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-AVAIL
+    summary: "TC: Availability excludes a room with an overlapping booking"
+    precondition: "A room has a booking for next week."
+    steps:
+      - "GET /booking?roomid={id}&checkin=..&checkout=.. for the same dates"
+      - "Assert the room is not offered for those dates"
+    expected: "Booked rooms are excluded from availability."
+  - id: TC-ROOM-006
+    module: Rooms
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-INV
+    summary: "TC: Room API deletes a room"
+    precondition: "A room with no bookings exists."
+    steps:
+      - "DELETE /room/{id}"
+      - "GET /room and assert the room is gone"
+    expected: "The room is removed."
+  - id: TC-ROOM-007
+    module: Rooms
+    type: UI
+    priority: P2
+    automated: false
+    covers: RBP-INV
+    summary: "TC: Room list shows price with the currency symbol"
+    precondition: "At least one room exists."
+    steps:
+      - "Open Admin > Rooms"
+      - "Assert prices are formatted with a currency symbol"
+    expected: "Prices are human-readable."
+  - id: TC-ROOM-008
+    module: Rooms
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-INV
+    summary: "TC: Room API rejects a negative price"
+    precondition: "Authenticated as admin."
+    steps:
+      - "POST /room with price -1"
+      - "Assert 4xx"
+    expected: "Negative prices are rejected."
+  - id: TC-ROOM-009
+    module: Rooms
+    type: UI
+    priority: P2
+    automated: true
+    covers: RBP-INV
+    summary: "TC: Deleting a room asks for confirmation"
+    precondition: "Logged in as admin with a room present."
+    steps:
+      - "Click delete on a room"
+      - "Assert a confirmation is required before deletion"
+    expected: "Destructive actions are confirmed."
+  - id: TC-ROOM-010
+    module: Rooms
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-AVAIL
+    summary: "TC: Room becomes available again after its booking ends"
+    precondition: "A room's only booking has ended."
+    steps:
+      - "GET availability for a future range with no bookings"
+      - "Assert the room is offered"
+    expected: "The room is available again."
+  - id: TC-ROOM-011
+    module: Rooms
+    type: API
+    priority: P2
+    automated: true
+    covers: RBP-INV
+    summary: "TC: Room API returns 404 for an unknown room id"
+    precondition: "Authenticated as admin."
+    steps:
+      - "GET /room/999999"
+      - "Assert 404"
+    expected: "Unknown ids return 404."
+  - id: TC-ROOM-012
+    module: Rooms
+    type: UI
+    priority: P2
+    automated: false
+    covers: RBP-INV
+    summary: "TC: Room form validates required fields"
+    precondition: "Logged in as admin."
+    steps:
+      - "Submit the add-room form empty"
+      - "Assert required-field errors"
+    expected: "The form blocks empty submission."
+
+  # ---------------- Auth (8) ----------------
+  - id: TC-AUTH-001
+    module: Auth
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-AUTH
+    summary: "TC: Auth API returns a token for valid credentials"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /auth/login with admin/password"
+      - "Assert 200 and a non-empty token"
+    expected: "A token is returned."
+  - id: TC-AUTH-002
+    module: Auth
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-AUTH
+    summary: "TC: Auth API rejects invalid credentials"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /auth/login with admin/wrong"
+      - "Assert the response has no token"
+    expected: "Invalid credentials produce no token."
+  - id: TC-AUTH-003
+    module: Auth
+    type: UI
+    priority: P1
+    automated: true
+    covers: RBP-AUTH
+    summary: "TC: Admin login redirects to the admin area"
+    precondition: "Admin login page is open."
+    steps:
+      - "Log in with admin/password"
+      - "Assert the admin area is shown"
+    expected: "Successful login lands on the admin dashboard."
+  - id: TC-AUTH-004
+    module: Auth
+    type: UI
+    priority: P1
+    automated: true
+    covers: RBP-AUTH
+    summary: "TC: Logout ends the admin session"
+    precondition: "Logged in as admin."
+    steps:
+      - "Click logout"
+      - "Assert the admin area is no longer reachable"
+    expected: "Logout clears the session."
+  - id: TC-AUTH-005
+    module: Auth
+    type: UI
+    priority: P2
+    automated: false
+    covers: RBP-AUTH
+    summary: "TC: Login shows an error for wrong credentials"
+    precondition: "Admin login page is open."
+    steps:
+      - "Log in with admin/wrong"
+      - "Assert an error message is shown"
+    expected: "A clear error is displayed."
+  - id: TC-AUTH-006
+    module: Auth
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-NFR
+    summary: "TC: Admin API rejects a request with no token"
+    precondition: "No token."
+    steps:
+      - "GET /message without a token"
+      - "Assert 401/403"
+    expected: "Admin APIs are protected."
+  - id: TC-AUTH-007
+    module: Auth
+    type: API
+    priority: P2
+    automated: true
+    covers: RBP-NFR
+    summary: "TC: Auth API rejects an empty password"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /auth/login with an empty password"
+      - "Assert no token and 4xx"
+    expected: "Empty passwords are rejected."
+  - id: TC-AUTH-008
+    module: Auth
+    type: UI
+    priority: P2
+    automated: false
+    covers: RBP-AUTH
+    summary: "TC: Login page is keyboard accessible"
+    precondition: "Admin login page is open."
+    steps:
+      - "Tab to username and password and log in"
+    expected: "The form is fully keyboard operable."
+
+  # ---------------- Messages (10) ----------------
+  - id: TC-MSG-001
+    module: Messages
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-MSG
+    summary: "TC: Message API creates an enquiry"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /message with valid name/email/phone/subject/description"
+      - "Assert 200 and a messageid"
+    expected: "The message is created."
+  - id: TC-MSG-002
+    module: Messages
+    type: UI
+    priority: P1
+    automated: true
+    covers: RBP-MSG
+    summary: "TC: Contact form submits an enquiry from the UI"
+    precondition: "Home page is open."
+    steps:
+      - "Fill the contact form and submit"
+      - "Assert a success message is shown"
+    expected: "The enquiry is accepted."
+  - id: TC-MSG-003
+    module: Messages
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-MSG
+    summary: "TC: Admin can read a message"
+    precondition: "A message exists."
+    steps:
+      - "Authenticate as admin"
+      - "GET /message/{id} and assert the body matches"
+    expected: "The admin retrieves the message."
+  - id: TC-MSG-004
+    module: Messages
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-MSG
+    summary: "TC: Admin can delete a message"
+    precondition: "A message exists."
+    steps:
+      - "DELETE /message/{id}"
+      - "Assert it is no longer listed"
+    expected: "The message is removed."
+  - id: TC-MSG-005
+    module: Messages
+    type: UI
+    priority: P2
+    automated: true
+    covers: RBP-MSG
+    summary: "TC: Message unread count updates in the admin inbox"
+    precondition: "Logged in as admin; a new message exists."
+    steps:
+      - "Open Admin > Messages"
+      - "Assert the unread count matches the new message"
+    expected: "The inbox count is accurate."
+  - id: TC-MSG-006
+    module: Messages
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-MOD
+    summary: "TC: Message API rejects a missing required field"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /message without description"
+      - "Assert 4xx"
+    expected: "Incomplete messages are rejected."
+  - id: TC-MSG-007
+    module: Messages
+    type: API
+    priority: P2
+    automated: true
+    covers: RBP-MOD
+    summary: "TC: Message API validates the phone format"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /message with phone 'abc'"
+      - "Assert 4xx"
+    expected: "Invalid phone numbers are rejected."
+  - id: TC-MSG-008
+    module: Messages
+    type: UI
+    priority: P1
+    automated: true
+    covers: RBP-MOD
+    summary: "TC: Script in a message is not executed in the admin inbox"
+    precondition: "Logged in as admin."
+    steps:
+      - "POST /message with description '<script>alert(1)</script>'"
+      - "Open the message in the admin inbox and assert no dialog appears"
+    expected: "Script is escaped, not executed."
+  - id: TC-MSG-009
+    module: Messages
+    type: API
+    priority: P2
+    automated: true
+    covers: RBP-MSG
+    summary: "TC: Message API accepts the longest allowed subject"
+    precondition: "RBP API is reachable."
+    steps:
+      - "POST /message with a subject at the maximum length"
+      - "Assert 200"
+    expected: "Boundary-length subjects are accepted."
+  - id: TC-MSG-010
+    module: Messages
+    type: UI
+    priority: P2
+    automated: false
+    covers: RBP-MSG
+    summary: "TC: Contact form shows errors for an invalid email"
+    precondition: "Home page is open."
+    steps:
+      - "Enter an invalid email and submit"
+      - "Assert an email error is shown"
+    expected: "The form blocks invalid emails."
+
+  # ---------------- Report (6) ----------------
+  - id: TC-REP-001
+    module: Report
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-REP
+    summary: "TC: Report API returns a summary"
+    precondition: "Authenticated as admin."
+    steps:
+      - "GET /report"
+      - "Assert 200 and a summary object"
+    expected: "The report data is returned."
+  - id: TC-REP-002
+    module: Report
+    type: UI
+    priority: P1
+    automated: true
+    covers: RBP-REP
+    summary: "TC: Report page lists rooms and bookings"
+    precondition: "Logged in as admin; at least one booking exists."
+    steps:
+      - "Open Admin > Report"
+      - "Assert the booked room appears"
+    expected: "The report reflects current bookings."
+  - id: TC-REP-003
+    module: Report
+    type: UI
+    priority: P2
+    automated: false
+    covers: RBP-REP
+    summary: "TC: Report page shows the message count"
+    precondition: "At least one message exists."
+    steps:
+      - "Open Admin > Report"
+      - "Assert a message count is shown"
+    expected: "Message counts are displayed."
+  - id: TC-REP-004
+    module: Report
+    type: API
+    priority: P2
+    automated: true
+    covers: RBP-REP
+    summary: "TC: Report API rejects an unauthenticated request"
+    precondition: "No token."
+    steps:
+      - "GET /report without a token"
+      - "Assert 401/403"
+    expected: "The report is protected."
+  - id: TC-REP-005
+    module: Report
+    type: UI
+    priority: P1
+    automated: true
+    covers: RBP-REP
+    summary: "TC: Report updates after a new booking"
+    precondition: "Logged in as admin."
+    steps:
+      - "Create a booking, then open Admin > Report"
+      - "Assert the new booking is included"
+    expected: "The report is current."
+  - id: TC-REP-006
+    module: Report
+    type: UI
+    priority: P2
+    automated: false
+    covers: RBP-REP
+    summary: "TC: Report page is readable on a narrow viewport"
+    precondition: "Logged in as admin."
+    steps:
+      - "Open Admin > Report at 375px width"
+      - "Assert columns do not overflow"
+    expected: "The report is responsive."
+
+  # ---------------- Branding (4) ----------------
+  - id: TC-BRAND-001
+    module: Branding
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-BRAND
+    summary: "TC: Branding API returns the current branding"
+    precondition: "RBP API is reachable."
+    steps:
+      - "GET /branding"
+      - "Assert 200 and a name field"
+    expected: "Branding is returned."
+  - id: TC-BRAND-002
+    module: Branding
+    type: UI
+    priority: P2
+    automated: true
+    covers: RBP-BRAND
+    summary: "TC: Admin updates the site name and it shows publicly"
+    precondition: "Logged in as admin."
+    steps:
+      - "Update the site name in Admin > Branding"
+      - "Open the public site and assert the new name is shown"
+    expected: "Branding updates propagate to the public site."
+  - id: TC-BRAND-003
+    module: Branding
+    type: API
+    priority: P2
+    automated: true
+    covers: RBP-BRAND
+    summary: "TC: Branding API rejects a blank name"
+    precondition: "Authenticated as admin."
+    steps:
+      - "PUT /branding with a blank name"
+      - "Assert 4xx"
+    expected: "Invalid branding is rejected."
+  - id: TC-BRAND-004
+    module: Branding
+    type: UI
+    priority: P2
+    automated: false
+    covers: RBP-BRAND
+    summary: "TC: Branding form keeps long values intact"
+    precondition: "Logged in as admin."
+    steps:
+      - "Set a long site name and save, then reload"
+    expected: "The long value persists."
+
+  # ---------------- Cross / NFR (4) ----------------
+  - id: TC-NFR-001
+    module: Cross
+    type: API
+    priority: P0
+    automated: true
+    covers: RBP-NFR
+    summary: "TC: API returns 4xx not 5xx for bad input across services"
+    precondition: "RBP API is reachable."
+    steps:
+      - "Send malformed payloads to /booking, /room, /message"
+      - "Assert each returns 4xx"
+    expected: "No service returns 5xx for bad input."
+  - id: TC-NFR-002
+    module: Cross
+    type: API
+    priority: P1
+    automated: true
+    covers: RBP-NFR
+    summary: "TC: Admin endpoints reject cross-service token reuse"
+    precondition: "A token from another service."
+    steps:
+      - "Call /room with a token minted for a different service"
+      - "Assert 401/403"
+    expected: "Tokens are scoped and validated."
+  - id: TC-NFR-003
+    module: Cross
+    type: UI
+    priority: P1
+    automated: false
+    covers: RBP-NFR
+    summary: "TC: Public pages have labelled form fields"
+    precondition: "Home page is open."
+    steps:
+      - "Inspect the booking and contact forms for labels/aria on each input"
+    expected: "Every input has an accessible name."
+  - id: TC-NFR-004
+    module: Cross
+    type: UI
+    priority: P2
+    automated: true
+    covers: RBP-NFR
+    summary: "TC: No console errors on the home page load"
+    precondition: "Browser console is open."
+    steps:
+      - "Load the home page"
+      - "Assert no console errors"
+    expected: "The page loads cleanly."
+
+bugs:
+  - module: Booking
+    priority: P1
+    severity: High
+    summary: "BUG: Booking with a past check-in date is accepted"
+    found_by: TC-BOOK-004
+    affects_story: RBP-DATES
+    repro:
+      - "POST /booking with checkin in the past and a valid checkout"
+      - "Observe a booking id is returned"
+    expected: "Past dates are rejected with a 4xx error."
+    actual: "The booking is created successfully."
+    notes: "No server-side date validation; only the UI blocks past dates."
+  - module: Booking
+    priority: P0
+    severity: Critical
+    summary: "BUG: Double-booking - same room can be booked for overlapping dates"
+    found_by: TC-BOOK-006
+    affects_story: RBP-AVAIL
+    repro:
+      - "Create a booking for room 1, dates D1-D3"
+      - "Create a second booking for room 1, dates D2-D4"
+    expected: "The second booking is rejected."
+    actual: "Both bookings are accepted; the room is double-booked."
+  - module: Booking
+    priority: P1
+    severity: High
+    summary: "BUG: Boundary date overlap makes a free room appear unavailable"
+    found_by: TC-BOOK-010
+    affects_story: RBP-AVAIL
+    repro:
+      - "Room has a booking ending 2026-06-03"
+      - "Request availability from 2026-06-03"
+    expected: "The room is available from 2026-06-03."
+    actual: "The room is excluded."
+    notes: "Overlap check uses >= instead of >."
+  - module: Booking
+    priority: P2
+    severity: Medium
+    summary: "BUG: Missing last name returns HTTP 500 instead of a validation error"
+    found_by: TC-BOOK-016
+    affects_story: RBP-NFR
+    repro:
+      - "POST /booking without lastname"
+    expected: "A 4xx validation error naming the field."
+    actual: "HTTP 500 with a stack trace."
+  - module: Rooms
+    priority: P1
+    severity: High
+    summary: "BUG: Unauthenticated POST /room creates a room"
+    found_by: TC-ROOM-002
+    affects_story: RBP-AUTH
+    repro:
+      - "POST /room with no auth token"
+    expected: "401/403."
+    actual: "The room is created (200)."
+  - module: Rooms
+    priority: P1
+    severity: High
+    summary: "BUG: Deleting a room also removes its future bookings"
+    found_by: TC-ROOM-006
+    affects_story: RBP-INV
+    repro:
+      - "Create a room, book it, then delete the room"
+      - "GET /booking"
+    expected: "The booking is preserved or the delete is blocked."
+    actual: "The booking disappears."
+  - module: Rooms
+    priority: P2
+    severity: Medium
+    summary: "BUG: Negative room price is accepted"
+    found_by: TC-ROOM-008
+    affects_story: RBP-INV
+    repro:
+      - "POST /room with price -1"
+    expected: "4xx."
+    actual: "The room is created with a negative price."
+  - module: Rooms
+    priority: P2
+    severity: Low
+    summary: "BUG: Room price is shown without a currency symbol"
+    found_by: TC-ROOM-007
+    affects_story: RBP-INV
+    repro:
+      - "Open Admin > Rooms"
+    expected: "Prices show a currency symbol."
+    actual: "A bare number is shown (e.g. '150')."
+  - module: Rooms
+    priority: P1
+    severity: High
+    summary: "BUG: Availability excludes rooms that are actually free (off-by-one)"
+    found_by: TC-ROOM-010
+    affects_story: RBP-AVAIL
+    repro:
+      - "Book a room for D1-D2"
+      - "Request availability from D3"
+    expected: "The room is offered from D3."
+    actual: "The room is excluded until D4."
+  - module: Auth
+    priority: P1
+    severity: High
+    summary: "BUG: Admin API accepts a request with no token on GET /message"
+    found_by: TC-AUTH-006
+    affects_story: RBP-NFR
+    repro:
+      - "GET /message with no token"
+    expected: "401/403."
+    actual: "200 with the message list."
+  - module: Auth
+    priority: P2
+    severity: Medium
+    summary: "BUG: Login with an empty password returns HTTP 500"
+    found_by: TC-AUTH-007
+    affects_story: RBP-AUTH
+    repro:
+      - "POST /auth/login with username admin and an empty password"
+    expected: "4xx with no token."
+    actual: "HTTP 500."
+  - module: Auth
+    priority: P2
+    severity: Medium
+    summary: "BUG: Logout does not clear the token; the admin area stays reachable"
+    found_by: TC-AUTH-004
+    affects_story: RBP-AUTH
+    repro:
+      - "Log in as admin, log out, then revisit an admin URL"
+    expected: "The admin area is blocked."
+    actual: "The admin area still loads."
+  - module: Messages
+    priority: P1
+    severity: High
+    summary: "BUG: Stored XSS - script in a message runs in the admin inbox"
+    found_by: TC-MSG-008
+    affects_story: RBP-MOD
+    repro:
+      - "POST /message with description containing a <script> tag"
+      - "Open the message in the admin inbox"
+    expected: "The script is escaped and does not run."
+    actual: "The script executes (alert shown)."
+  - module: Messages
+    priority: P2
+    severity: Medium
+    summary: "BUG: Message with an invalid phone number is accepted"
+    found_by: TC-MSG-007
+    affects_story: RBP-MOD
+    repro:
+      - "POST /message with phone 'abc'"
+    expected: "4xx."
+    actual: "The message is created."
+  - module: Messages
+    priority: P2
+    severity: Low
+    summary: "BUG: Unread count does not decrement after reading a message"
+    found_by: TC-MSG-005
+    affects_story: RBP-MSG
+    repro:
+      - "Open a new message in the admin inbox"
+    expected: "The unread count decreases."
+    actual: "The count stays the same."
+  - module: Report
+    priority: P2
+    severity: Medium
+    summary: "BUG: Report omits bookings created in the last hour"
+    found_by: TC-REP-005
+    affects_story: RBP-REP
+    repro:
+      - "Create a booking, then open Admin > Report"
+    expected: "The new booking is listed."
+    actual: "It is missing until the cache refreshes."
+  - module: Branding
+    priority: P2
+    severity: Medium
+    summary: "BUG: Branding update does not appear on the public site until a restart"
+    found_by: TC-BRAND-002
+    affects_story: RBP-BRAND
+    repro:
+      - "Update the site name in Admin > Branding"
+      - "Reload the public site"
+    expected: "The new name is shown."
+    actual: "The old name persists."
+  - module: Branding
+    priority: P2
+    severity: Low
+    summary: "BUG: Branding accepts a blank site name"
+    found_by: TC-BRAND-003
+    affects_story: RBP-BRAND
+    repro:
+      - "PUT /branding with name ''"
+    expected: "4xx."
+    actual: "200 and the public header goes blank."
+  - module: Cross
+    priority: P1
+    severity: High
+    summary: "BUG: Malformed payload to /booking returns HTTP 500"
+    found_by: TC-NFR-001
+    affects_story: RBP-NFR
+    repro:
+      - "POST /booking with an invalid JSON body"
+    expected: "4xx."
+    actual: "HTTP 500 with an internal error."
+  - module: Cross
+    priority: P2
+    severity: Low
+    summary: "BUG: Home page logs a JavaScript console error on load"
+    found_by: TC-NFR-004
+    affects_story: RBP-NFR
+    repro:
+      - "Open the home page with DevTools open"
+    expected: "No console errors."
+    actual: "'Uncaught TypeError: Cannot read properties of null' is logged."

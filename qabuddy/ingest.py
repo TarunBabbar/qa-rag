@@ -13,10 +13,11 @@ from __future__ import annotations
 
 import hashlib
 import time
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Callable
 
-from . import store
+from . import fetch, store
 from .chunkers import chunk_file, iter_files
 from .config import ROOT, settings, sources
 from .embed import embed_documents
@@ -57,8 +58,15 @@ def ingest(source_ids: list[str] | None = None, full: bool = False, progress: Pr
         if src.phase > 1:
             report["skipped_sources"].append({"id": src.id, "reason": f"phase {src.phase}"})
             continue
+        walk = src
+        if src.provider != "local":  # jira/github: pull into a transient staging tree
+            try:
+                walk = replace(src, path=fetch.stage_source(src))
+            except Exception as e:  # one provider failing must not stop the run
+                report["sources"][src.id] = {"label": src.label, "files": 0, "changed": 0, "unchanged": 0, "chunks": 0, "errors": [str(e)]}
+                continue
         stats = {"label": src.label, "files": 0, "changed": 0, "unchanged": 0, "chunks": 0, "errors": []}
-        for f in iter_files(src):
+        for f in iter_files(walk):
             rel = f.resolve().relative_to(ROOT).as_posix()
             on_disk.add(rel)
             stats["files"] += 1
@@ -68,7 +76,7 @@ def ingest(source_ids: list[str] | None = None, full: bool = False, progress: Pr
                 stats["unchanged"] += 1
                 stats["chunks"] += prev.get("chunks", 0)
                 continue
-            plan.append((src, f, rel, sha))
+            plan.append((walk, f, rel, sha))  # `walk` carries the staged path for API sources
             stats["changed"] += 1
         report["sources"][src.id] = stats
 
@@ -152,6 +160,7 @@ def ingest(source_ids: list[str] | None = None, full: bool = False, progress: Pr
             "embed_chunks_per_s": round(len(all_new) / (embed_ms / 1000), 1) if embed_ms > 0 and all_new else None,
         }
     )
+    fetch.cleanup()  # the staging tree is scratch space, never a source of truth
     say("done", 1, 1)
     return report
 
