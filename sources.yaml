@@ -2,28 +2,81 @@
 #
 # Providers:
 #   local   - a folder on disk (`path`)
-#   jira    - issues matching JIRA_JQL, via the Jira REST API
-#   github  - a repo (`repo: owner/name`, `ref: branch`) pulled as one tarball
+#   jira    - issues matching this source's JQL, via the Jira REST API
+#   github  - a repo (`repo: owner/name`, `ref: branch`) pulled as one tarball,
+#             optionally narrowed to `paths` (fnmatch, matched against the path
+#             inside the repo)
 #
-# `kind` picks the chunker:
-#   jira   ticket body + one chunk per comment
-#   docs   heading-aware sections
-#   code   AST split per class / method / test (TS, JS, Java + configs, docs)
+# `kind` picks the chunker *and* the icon the UI shows:
+#   stories, jira-testcases, bugs   ticket body + one chunk per comment
+#   ui, api, framework, code        AST split per class / method / test
+#   docs                            heading-aware sections
+#   testcases                       CSV/XLSX test repository
 #
+# Several sources may share a provider: the repo tarball is fetched once per
+# (repo, ref) per run and each source keeps only the files its `paths` match.
 # API-backed sources are staged into a transient `data/_staging` tree for the
 # duration of an ingest run and deleted afterwards: no data is kept locally.
 
 sources:
-  - id: jira
-    label: JIRA (stories, test cases, bugs)
-    kind: jira
+  # ── Jira ────────────────────────────────────────────────────────────────
+  - id: jira-stories
+    label: User Stories
+    kind: stories
     provider: jira
-    description: Stories, test cases and bugs from the QAB project
+    jql: 'project = QAB AND issuetype = "Story"'
+    description: What the product should do — user stories from the QAB project
 
-  - id: github
-    label: Automation code (GitHub)
-    kind: code
+  - id: jira-testcases
+    label: Test Cases
+    kind: jira-testcases
+    provider: jira
+    jql: 'project = QAB AND issuetype = "Test Case"'
+    description: The manual test cases (steps, expected results, priority)
+
+  - id: jira-bugs
+    label: Bugs
+    kind: bugs
+    provider: jira
+    jql: 'project = QAB AND issuetype = "Bug"'
+    description: Defects with severity, status and reproduction notes
+
+  # ── Automation code (one repo, split by area) ───────────────────────────
+  - id: ui-automation
+    label: UI Automation
+    kind: ui
     provider: github
     repo: TarunBabbar/SampleTestAutomation
     ref: main
-    description: Playwright UI + API automation for restful-booker-platform
+    paths:
+      - src/pages/*
+      - src/fixtures/ui.ts
+      - tests/ui/*
+    description: Playwright UI tests and their page objects
+
+  - id: api-automation
+    label: API Automation
+    kind: api
+    provider: github
+    repo: TarunBabbar/SampleTestAutomation
+    ref: main
+    paths:
+      - src/api/*
+      - src/data/*
+      - src/fixtures/api.ts
+      - tests/api/*
+    description: Playwright API client, fixtures and API specs
+
+  - id: test-framework
+    label: Framework & CI
+    kind: framework
+    provider: github
+    repo: TarunBabbar/SampleTestAutomation
+    ref: main
+    paths:
+      - playwright.config.ts
+      - package.json
+      - tsconfig.json
+      - README.md
+      - .github/workflows/*
+    description: How the suite is wired and run — config, scripts and CI

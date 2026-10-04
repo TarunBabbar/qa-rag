@@ -70,31 +70,31 @@ Two deliberate differences from a Qdrant-based design:
 * **Pinecone applies no IDF.** The sparse side carries BM25 TF saturation + length
   normalisation only; the dense side supplies the semantic signal and ranks are fused.
 
-## Data sources
+## Knowledge sources
 
-```
-data/
-├── 00_TestCases/            VWO_500_Test_Cases.csv
-├── 01_JIRA_Tickets/         VWO-26, VWO-33 exports + QAB-101..103
-├── 02_Company_Docs/         QA handbook, coding standards, onboarding PDF
-├── 03_Meeting_Notes/        triage meeting, sprint planning, stand-up VTT
-├── 04_Lucid_charts/         login flow CSV, CI pipeline text, A/B lifecycle JSON
-├── 05_PRD_SRS_BRD_FRDs/     Product Requirements Document (PRD) VWO.com
-├── 06_Jenkins_Logs/         builds #142, #143, #88 + JUnit XML
-└── 07_Source_Codes/         ATB13xSeleniumAdvanceFramework, AdvancePlaywrightFramework1x
-```
+`sources.yaml` is the whole model: each entry declares a provider, its JQL (Jira) or path
+filters (GitHub), and the `kind` that picks the chunker **and** the icon the UI shows. No
+source is copied to disk as a source of truth — API-backed sources are staged into a
+transient `data/_staging` tree for one ingest run and deleted afterwards; only the vectors
+persist.
 
-`sources.yaml` maps each folder to its chunker. `_`-prefixed files are never ingested.
+| Source | Provider | What it holds | Chunks |
+|---|---|---|---|
+| `jira-stories` | Jira · `project = QAB AND issuetype = "Story"` | what the product should do | 10 |
+| `jira-testcases` | Jira · `issuetype = "Test Case"` | the manual test cases | 61 |
+| `jira-bugs` | Jira · `issuetype = "Bug"` | defects, severity, repro notes | 20 |
+| `ui-automation` | GitHub · `src/pages/*`, `src/fixtures/ui.ts`, `tests/ui/*` | Playwright UI specs + page objects | 5 |
+| `api-automation` | GitHub · `src/api/*`, `src/data/*`, `src/fixtures/api.ts`, `tests/api/*` | API client, fixtures, specs | 9 |
+| `test-framework` | GitHub · `playwright.config.ts`, `package.json`, `tsconfig.json`, `.github/workflows/*`, `README.md` | how the suite is wired and run | 9 |
 
-`data/07_Source_Codes/` (the Selenium and Playwright sample frameworks) is **not committed** —
-they are corpus data, not app code, and keeping them out avoids Vercel mistaking them for a
-deployable app. They are still on your machine if you cloned them; on a fresh clone, fetch
-the two repos into `data/07_Source_Codes/` before ingesting code/RTM modes:
+The three GitHub sources share one repository: the tarball is fetched **once per
+(repo, ref) per run** and each source keeps only the files its `paths` match. That is what
+lets the automation code be searched as UI automation, API automation or framework/config
+independently — a question about page objects never has to wade through API fixtures.
 
-```bash
-git clone https://github.com/PramodDutta/ATB13xSeleniumAdvanceFramework data/07_Source_Codes/ATB13xSeleniumAdvanceFramework
-git clone https://github.com/PramodDutta/AdvancePlaywrightFramework1x data/07_Source_Codes/AdvancePlaywrightFramework1x
-```
+Those ids are also the retrieval filter: the checkboxes in the UI and every mode's
+`sources=` list are these ids. Per-source counts come from the ingest manifest where
+ingestion ran, and from the index metadata on the read-only deployment.
 
 ## Chunking rules (per source)
 

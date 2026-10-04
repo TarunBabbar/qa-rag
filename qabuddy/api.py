@@ -84,6 +84,13 @@ def health() -> dict:
 @app.get("/api/sources")
 def list_sources() -> list[dict]:
     counts = source_counts()
+    if not counts:
+        # The ingest manifest only exists where ingestion ran. On the read-only
+        # deployment, ask the index instead so the counts are still real.
+        try:
+            counts = {sid: {"chunks": n} for sid, n in store.counts_by_source().items()}
+        except Exception:
+            counts = {}
     try:
         from .chunkers import iter_files  # local-only dependency
     except Exception:
@@ -231,7 +238,7 @@ def jira_sync(req: JiraReq) -> dict:
         raise HTTPException(400, str(e))
     if not _job["running"]:
         _job.update(running=True, stage="starting", done=0, total=0, started=time.time(), finished=None, report=None, error=None)
-        threading.Thread(target=_run_ingest, args=(["jira"], False), daemon=True).start()
+        threading.Thread(target=_run_ingest, args=([s.id for s in sources() if s.provider == "jira"], False), daemon=True).start()
     return out
 
 

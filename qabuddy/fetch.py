@@ -8,6 +8,7 @@ per-file API calls), and Jira issues are written as the same Markdown the local
 
 from __future__ import annotations
 
+import fnmatch
 import io
 import os
 import shutil
@@ -19,6 +20,10 @@ import httpx
 from .config import ROOT, Source, settings
 
 GITHUB_API = "https://api.github.com"
+
+# One download per (repo, ref) per run: several sources may narrow the same repo
+# to different paths, and fetching the tarball once per source would be wasteful.
+_TARBALLS: dict[tuple[str, str], bytes] = {}
 
 
 def staging_root() -> Path:
@@ -34,9 +39,9 @@ def stage_source(src: Source) -> Path | None:
         shutil.rmtree(dest)
     dest.mkdir(parents=True, exist_ok=True)
     if src.provider == "jira":
-        stage_jira(dest)
+        stage_jira(dest, src.jql)
     elif src.provider == "github":
-        stage_github(dest, src.repo, src.ref)
+        stage_github(dest, src.repo, src.ref, src.paths)
     else:
         raise RuntimeError(f"Unknown source provider: {src.provider}")
     return dest
@@ -47,23 +52,26 @@ def cleanup() -> None:
     root = staging_root()
     if root.exists():
         shutil.rmtree(root, ignore_errors=True)
+    _TARBALLS.clear()
 
 
-def stage_jira(dest: Path) -> None:
+def stage_jira(dest: Path, jql: str = "") -> None:
     from .jira_sync import fetch_issues, ticket_markdown
 
     s = settings()
+    query = jql or s.jira_jql
     count = 0
-    for issue in fetch_issues(s.jira_jql):
+    for issue in fetch_issues(query):
         safe = "".join(c if (c.isalnum() or c in "-_") else "_" for c in issue["key"])
         (dest / f"{safe}.md").write_text(ticket_markdown(issue, s.jira_base_url), encoding="utf-8")
         count += 1
-    print(f"[fetch] jira: {count} issues ({s.jira_jql})")
+    print(f"[fetch] jira: {count} issues ({query})")
 
 
-def stage_github(dest: Path, repo: str, ref: str = "main") -> None:
-    if not repo:
-        raise RuntimeError("a github source needs `repo: owner/name` in sources.yaml")
+def _tarball(repo: str, ref: str) -> bytes:
+    key = (repo, ref)
+    if key in _TARBALLS:
+        return _TARBALLS[key]
     headers = {"Accept": "application/vnd.github+json"}
     token = os.getenv("GITHUB_TOKEN", "").strip()
     if token:
@@ -74,6 +82,14 @@ def stage_github(dest: Path, repo: str, ref: str = "main") -> None:
             raise RuntimeError(f"GitHub repo or ref not found: {repo}@{ref}")
         r.raise_for_status()
         blob = r.read()
+    _TARBALLS[key] = blob
+    return blob
+
+
+def stage_github(dest: Path, repo: str, ref: str = "main", paths: tuple[str, ...] = ()) -> None:
+    if not repo:
+        raise RuntimeError("a github source needs `repo: owner/name` in sources.yaml")
+    blob = _tarball(repo, ref)
 
     files = 0
     with tarfile.open(fileobj=io.BytesIO(blob), mode="r:gz") as tar:
@@ -86,10 +102,19 @@ def stage_github(dest: Path, repo: str, ref: str = "main") -> None:
             rel = Path(*parts[1:])
             if rel.is_absolute() or ".." in rel.parts:
                 continue
+            if paths and not _wanted(rel.as_posix(), paths):
+                continue
             target = dest / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             handle = tar.extractfile(member)
             if handle is not None:
                 target.write_bytes(handle.read())
                 files += 1
-    print(f"[fetch] github: {repo}@{ref} ({files} files)")
+    scope = f", {len(paths)} path filter(s)" if paths else ""
+    print(f"[fetch] github: {repo}@{ref} ({files} files{scope})")
+
+
+def _wanted(rel: str, paths: tuple[str, ...]) -> bool:
+    """fnmatch is deliberate: `*` crossing `/` keeps `src/api/*` meaning
+    'everything under src/api', which is what sources.yaml intends."""
+    return any(fnmatch.fnmatchcase(rel, pattern) for pattern in paths)

@@ -17,9 +17,17 @@ from .transcript import chunk_transcript
 
 Chunker = Callable[[Path, Source, str], list[Chunk]]
 
+# `kind` is a label as much as a chunker choice: the UI shows one entry per kind,
+# so Stories / Test Cases / Bugs are distinct kinds even though they are all Jira
+# tickets and all chunk identically. Same for the areas of the automation repo.
+JIRA_KINDS = {"jira", "stories", "jira-testcases", "bugs"}
+CODE_KINDS = {"code", "ui", "api", "framework"}
+
+_TICKET_EXTS = {".md", ".txt", ".html", ".htm", ".doc"}
+
 KINDS: dict[str, tuple[set[str], Chunker]] = {
+    **{k: (_TICKET_EXTS, chunk_jira) for k in JIRA_KINDS},
     "testcases": ({".csv", ".xlsx", ".xlsm"}, chunk_testcases),
-    "jira": ({".md", ".txt", ".html", ".htm", ".doc"}, chunk_jira),
     "docs": ({".pdf", ".md", ".markdown", ".txt"}, chunk_docs),
     "transcript": ({".txt", ".md", ".vtt", ".srt"}, chunk_transcript),
     "diagram": ({".csv", ".json", ".txt", ".md"}, chunk_diagram),
@@ -31,7 +39,7 @@ def iter_files(source: Source) -> Iterator[Path]:
     """Files a source contributes. `_`-prefixed and hidden files are notes, not content."""
     if source.phase > 1 or source.path is None or not source.path.exists():
         return
-    if source.kind == "code":
+    if source.kind in CODE_KINDS:
         yield from iter_repo_files(source.path)
         return
     exts, _ = KINDS.get(source.kind, (set(), None))
@@ -43,7 +51,7 @@ def iter_files(source: Source) -> Iterator[Path]:
 def chunk_file(path: Path, source: Source) -> list[Chunk]:
     path = path.resolve()
     rel = path.relative_to(ROOT).as_posix()
-    if source.kind == "code":
+    if source.kind in CODE_KINDS:
         chunks = chunk_code(path, source, rel)
     else:
         _, fn = KINDS[source.kind]

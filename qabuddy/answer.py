@@ -60,7 +60,7 @@ MODES: dict[str, Mode] = {
         ),
         Mode(
             "rca", "Failure analysis (RCA)", "🧯", "Correlate test failures with code, bugs and Jira tickets",
-            ["jira", "github"], 8, 2000,
+            ["jira-bugs", "jira-testcases", "ui-automation", "api-automation", "test-framework"], 8, 2000,
             "Structure the answer as: **Symptom** (exact error, build, test), **Root cause** (evidence with citations; "
             "say whether it is a product bug, a test/framework problem or an environment problem), **Flaky or real?** "
             "(retry evidence), **Related tickets**, **Fix and next steps** (concrete, with file and line where the sources show them).",
@@ -69,11 +69,11 @@ MODES: dict[str, Mode] = {
                 "Is the booking creation test flaky?",
                 "Which bug explains the 500 on a booking with no lastname?",
             ],
-            {"jira": 2},
+            {"jira-bugs": 2},
         ),
         Mode(
             "test_design", "Test design & gaps", "🧪", "Compare requirements with test cases, find gaps, draft new cases",
-            ["jira"], 8, 2400,
+            ["jira-stories", "jira-testcases"], 8, 2400,
             "Compare the requirement sections with the test cases in the sources. First list what is covered "
             "(requirement -> test case IDs). Then give the gaps as a table: | Requirement (doc §) | Missing scenario | "
             "Suggested priority | Positive/Negative |. When asked to write test cases, use the team's format: ID "
@@ -86,11 +86,11 @@ MODES: dict[str, Mode] = {
                 "Draft 4 API test cases for room availability in our format",
                 "Review TC-BOOK-006 and suggest how to make it sharper",
             ],
-            {"jira": 3},
+            {"jira-testcases": 3},
         ),
         Mode(
             "triage", "Bug triage", "🐞", "Duplicates, severity, priority and affected tests for a ticket",
-            ["jira"], 7, 1600,
+            ["jira-bugs", "jira-testcases"], 7, 1600,
             "Structure the answer as: **Summary**, **Duplicates / related** (ticket keys), **Severity** and **Priority** "
             "justified by the team's triage rules in the sources, **Affected test cases** (IDs), **Suggested owner / component**. "
             "If the triage rules are not in the sources, say so instead of inventing them.",
@@ -99,11 +99,11 @@ MODES: dict[str, Mode] = {
                 "Which open bugs affect booking test cases?",
                 "Set severity and priority for the double-booking bug",
             ],
-            {"jira": 2},
+            {"jira-bugs": 2},
         ),
         Mode(
             "code", "Framework coding help", "🛠️", "Answers and code from your own Playwright automation framework",
-            ["github"], 7, 2600,
+            ["ui-automation", "api-automation", "test-framework"], 7, 2600,
             "Answer at the level of THIS team's frameworks: reuse their classes, helpers, fixtures, locators and naming "
             "exactly as they appear in the sources, and cite the files. Point out anti-patterns visible in the sources "
             "(for example hard sleeps). When writing new code, say which existing file it follows.",
@@ -115,7 +115,7 @@ MODES: dict[str, Mode] = {
         ),
         Mode(
             "rtm", "Traceability (RTM)", "🧭", "Requirements -> test cases -> automation -> open bugs",
-            ["jira"], 10, 2400,
+            ["jira-stories", "jira-testcases", "jira-bugs", "ui-automation", "api-automation"], 10, 2400,
             "Output a traceability matrix: | Requirement (doc §, ID) | Test case IDs | Automated? | Open bugs | Coverage |. "
             "Use the test case repository summary to see every module and its ID range. Mapping a requirement to a module "
             "by matching feature and module names is expected: do it and mark the cell (inferred). Write 'No test case "
@@ -124,7 +124,7 @@ MODES: dict[str, Mode] = {
                 "Build an RTM for the booking stories",
                 "Trace the room inventory story to its test cases, automation status and open bugs",
             ],
-            {"jira": 4},
+            {"jira-testcases": 4},
         ),
     ]
 }

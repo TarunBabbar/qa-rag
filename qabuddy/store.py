@@ -134,6 +134,8 @@ def collection_dim() -> int | None:
 
 
 def count(source_id: str | None = None) -> int:
+    if source_id:  # per-source counts need metadata, not the index stats
+        return counts_by_source().get(source_id, 0)
     try:
         stats = index().describe_index_stats()
     except Exception:
@@ -143,6 +145,32 @@ def count(source_id: str | None = None) -> int:
         summary = (getattr(stats, "namespaces", None) or {}).get(ns)
         return int(getattr(summary, "vector_count", 0) or 0) if summary else 0
     return int(getattr(stats, "total_vector_count", 0) or 0)
+
+
+_counts_cache: tuple[float, dict[str, int]] | None = None
+
+
+def counts_by_source(ttl: float = 300.0) -> dict[str, int]:
+    """How many points each source contributed, read from the index metadata.
+
+    The ingest manifest is the fast path, but it only exists where ingestion ran;
+    on the read-only deployment this is what fills the per-source counts in.
+    Cached briefly: it walks the whole (small) index.
+    """
+    global _counts_cache
+    now = time.time()
+    if _counts_cache and now - _counts_cache[0] < ttl:
+        return _counts_cache[1]
+    counts: dict[str, int] = {}
+    try:
+        for _pid, md in _payloads(_scan_ids()).items():
+            sid = md.get("source_id")
+            if sid:
+                counts[str(sid)] = counts.get(str(sid), 0) + 1
+    except Exception:  # a counts lookup must never break the page
+        return {}
+    _counts_cache = (now, counts)
+    return counts
 
 
 def _clean_metadata(payload: dict) -> dict:
@@ -256,16 +284,32 @@ def exact_ids(question: str) -> list[str]:
 
 
 def _scan_ids(limit: int = 20000) -> list[str]:
-    """Fallback id enumeration for metadata lookups when the zero-vector query is unavailable."""
+    """Enumerate point ids for metadata lookups.
+
+    `index.list()` yields *pages* (`ListResponse.vectors`), not bare id strings, so
+    the pages have to be unwrapped — collecting them directly yields two page
+    objects instead of the ids, and every metadata lookup then finds nothing.
+    """
     ids: list[str] = []
     try:
-        for pid in index().list(namespace=_ns()):
-            ids.append(pid)
+        for page in index().list(namespace=_ns()):
+            items = getattr(page, "vectors", None)
+            if items is None and isinstance(page, dict):
+                items = page.get("vectors")
+            if items is None:  # an SDK that yields plain ids
+                ids.append(str(page))
+            else:
+                for item in items:
+                    pid = getattr(item, "id", None)
+                    if pid is None and isinstance(item, dict):
+                        pid = item.get("id")
+                    if pid:
+                        ids.append(str(pid))
             if len(ids) >= limit:
                 break
     except Exception:
         return []
-    return ids
+    return ids[:limit]
 
 
 def _filter_query(flt: dict, limit: int) -> list[Match]:

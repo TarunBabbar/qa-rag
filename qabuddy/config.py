@@ -53,11 +53,15 @@ class Source:
     ref: str = "main"
     description: str = ""
     phase: int = 1
+    jql: str = ""  # provider=jira: the query for THIS source (falls back to JIRA_JQL)
+    paths: tuple[str, ...] = ()  # provider=github: fnmatch globs to keep from the repo
 
     @property
     def rel_path(self) -> str:
         if self.path is not None:
             return self.path.relative_to(ROOT).as_posix()
+        if self.provider == "github" and self.paths:
+            return f"{self.repo}@{self.ref}:{', '.join(self.paths)}"
         return f"{self.provider}:{self.repo or self.id}"
 
 
@@ -159,6 +163,8 @@ def sources() -> tuple[Source, ...]:
                 ref=s.get("ref", "main"),
                 description=s.get("description", ""),
                 phase=int(s.get("phase", 1)),
+                jql=s.get("jql", ""),
+                paths=tuple(s.get("paths") or ()),
             )
         )
     return tuple(out)
