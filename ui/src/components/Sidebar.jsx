@@ -66,7 +66,12 @@ export default function Sidebar({ modes, modeId, setMode, sources, selected, tog
               <span>indexed {new Date(health.indexed_at).toLocaleString()}</span>
             </div>
           )}
-          {!DEMO && (
+          {!DEMO && !health?.ingest_enabled && (
+            <div className="row" style={{ marginTop: 8 }}>
+              <span>Indexing runs locally — this deployment is read-only.</span>
+            </div>
+          )}
+          {!DEMO && health?.ingest_enabled && (
             <>
               {job?.running ? (
                 <>

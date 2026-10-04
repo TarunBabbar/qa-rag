@@ -71,6 +71,8 @@ def health() -> dict:
             "llm_model": s.llm_model.split(",")[0].strip(),
             "llm_configured": llm.configured(),
             "reranker": rerank.status(),
+            # ingestion only runs where the corpus lives; the hosted app is read-only
+            "ingest_enabled": not is_vercel(),
             "jira_configured": s.jira_configured,
             "indexed_at": m.get("updated_at"),
             "index_model": m.get("embed_model"),
