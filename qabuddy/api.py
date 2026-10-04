@@ -104,8 +104,10 @@ def list_sources() -> list[dict]:
                 "description": src.description,
                 "phase": src.phase,
                 "files_on_disk": files_on_disk,
-                "files_indexed": c.get("files", 0),
-                "chunks": c.get("chunks", 0),
+                # the ingest manifest only exists where ingestion ran; on the hosted
+                # app it is absent, so report unknown (null) rather than a fake zero
+                "files_indexed": c.get("files") if c else None,
+                "chunks": c.get("chunks") if c else None,
                 "indexed_at": c.get("indexed_at"),
             }
         )

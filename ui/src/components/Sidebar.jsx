@@ -41,11 +41,11 @@ export default function Sidebar({ modes, modeId, setMode, sources, selected, tog
             const k = kindOf(s.kind);
             const disabled = s.phase > 1;
             return (
-              <label key={s.id} className={`src ${disabled || !s.chunks ? 'off' : ''}`} title={`${s.description}\n${s.path}`}>
+              <label key={s.id} className={`src ${disabled || s.chunks === 0 ? 'off' : ''}`} title={`${s.description}\n${s.path}`}>
                 <input type="checkbox" checked={!disabled && selected.includes(s.id)} disabled={disabled} onChange={() => toggleSource(s.id)} />
                 <span className="si">{k.icon}</span>
                 <span className="sl">{s.label}</span>
-                {disabled ? <span className="tag">phase 2</span> : <span className="sc">{s.chunks}</span>}
+                {disabled ? <span className="tag">phase 2</span> : <span className="sc">{s.chunks ?? '—'}</span>}
               </label>
             );
           })}
