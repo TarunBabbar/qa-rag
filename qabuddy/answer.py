@@ -140,13 +140,51 @@ def normalize_citations(text: str) -> str:
     return _ALT_CITE.sub(lambda m: f"[{m.group(1) or m.group(2)}]", text)
 
 
-def citations(answer: str, n_sources: int) -> dict:
+# Hard facts an answer can be checked against: ticket/test ids and file paths.
+# Grounding is judged on these, not on the model's citation discipline, so it
+# holds as the free-model list rotates.
+_ID_TOKEN = re.compile(r"\b[A-Z][A-Z0-9]{1,15}(?:-[A-Z0-9]{1,15})*-\d{1,6}\b")
+_PATH_TOKEN = re.compile(r"\b[\w.-]+(?:/[\w.-]+)+\.(?:ts|tsx|js|jsx|java|py|json|ya?ml|md|xml|feature|properties)\b")
+
+
+def identifiers(answer: str) -> list[str]:
+    # Do not strip code here: paths/labels are usually written inside `backticks`,
+    # and grounding wants them. Marker counting strips code separately.
+    text = normalize_citations(answer)
+    return sorted(set(_ID_TOKEN.findall(text)) | set(_PATH_TOKEN.findall(text)))
+
+
+def lexical_grounding(answer: str, source_texts: list[str]) -> dict:
+    """Do the answer's identifiers actually appear in the retrieved sources?"""
+    ids = identifiers(answer)
+    if not ids:
+        return {"checked": 0, "found": 0, "ratio": None, "grounded": False, "missing": []}
+    hay = "\n".join(source_texts).lower()
+    missing = [i for i in ids if i.lower() not in hay]
+    found = len(ids) - len(missing)
+    ratio = found / len(ids)
+    return {"checked": len(ids), "found": found, "ratio": round(ratio, 3), "grounded": ratio >= 0.8, "missing": missing[:10]}
+
+
+def citations(answer: str, n_sources: int, source_texts: list[str] | None = None) -> dict:
     prose = _FENCE.sub(" ", normalize_citations(answer))
     found = [int(m) for m in _CITE.findall(prose)]
     valid = sorted({n for n in found if 1 <= n <= n_sources})
     invalid = sorted({n for n in found if not 1 <= n <= n_sources})
     not_found = "couldn't find" in answer.lower() or "could not find" in answer.lower()
-    return {"used": valid, "invalid": invalid, "grounded": bool(valid) or not_found, "said_not_found": not_found}
+    lex = lexical_grounding(answer, source_texts) if source_texts else {"grounded": False, "ratio": None, "missing": [], "checked": 0}
+    return {
+        "used": valid,
+        "invalid": invalid,
+        # markers = the model followed the [n] formatting rule
+        "markers": bool(valid),
+        # attributed = the answer's hard facts really are in the sources (model-agnostic)
+        "attributed": bool(lex["grounded"]),
+        "identifier_ratio": lex.get("ratio"),
+        "missing_identifiers": lex.get("missing", []),
+        "grounded": bool(valid) or not_found or bool(lex["grounded"]),
+        "said_not_found": not_found,
+    }
 
 
 def _budgets(sizes: list[int], total: int) -> list[int]:
@@ -219,6 +257,44 @@ def build_messages(question: str, mode: Mode, r: Retrieval, history: list[dict] 
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
+def repair_citations(answer: str, r: Retrieval) -> str | None:
+    """One small call to insert [n] markers. Formatting only; the prose is not rewritten.
+
+    Used only when the answer is already attributed to the sources but the model
+    omitted markers — i.e. a formatting miss, not a faithfulness problem.
+    """
+    listing = "\n".join(f"[{i}] {c.payload.get('title')}" for i, c in enumerate(r.sources, start=1))
+    msgs = [
+        {
+            "role": "system",
+            "content": "You only add citation markers. Return the user's text unchanged except for inserting [n] "
+            "markers after sentences, using only the numbers of the sources that support them. Never rewrite, "
+            "summarise, reorder or add text.",
+        },
+        {"role": "user", "content": f"Sources:\n{listing}\n\nText:\n{answer}"},
+    ]
+    try:
+        out, _ = llm.complete(msgs, max_tokens=min(2500, max(400, len(answer) // 3)))
+    except Exception:  # the repair is an enhancement: the answer stands without it
+        return None
+    out = normalize_citations(out).strip()
+    if out and citations(out, len(r.sources))["markers"] and len(out) >= 0.6 * len(answer):
+        return out
+    return None
+
+
+def _safe_stream(messages: list[dict], max_tokens: int) -> Iterator[tuple]:
+    """Yield from llm.stream, turning a total provider failure into a sentinel.
+
+    llm.stream is a generator, so the failure surfaces during iteration; this keeps
+    it out of the request handler, where it would become a 500.
+    """
+    try:
+        yield from llm.stream(messages, max_tokens)
+    except Exception as e:
+        yield None, {"failed": str(e)}
+
+
 def answer_stream(question: str, mode_id: str = "ask", source_ids: list[str] | None = None, history: list[dict] | None = None) -> Iterator[dict]:
     mode = MODES.get(mode_id, MODES["ask"])
     t_all = time.perf_counter()
@@ -244,8 +320,11 @@ def answer_stream(question: str, mode_id: str = "ask", source_ids: list[str] | N
     t0 = time.perf_counter()
     first_token_ms = None
     waited_s = 0.0  # time queued behind the provider's rate limit is not model latency
-    answer, usage = "", {}
-    for delta, u in llm.stream(messages, mode.max_tokens):
+    answer, usage, failed = "", {}, None
+    for delta, u in _safe_stream(messages, mode.max_tokens):
+        if u and u.get("failed"):  # every model failed: degrade, do not raise
+            failed = u["failed"]
+            break
         if delta is None:  # rate limited: tell the user, the client is already waiting
             waited_s += u["rate_limited_s"]
             yield {"type": "status", "message": f"The LLM provider rate-limited this request; retrying in {u['rate_limited_s']}s"}
@@ -257,6 +336,14 @@ def answer_stream(question: str, mode_id: str = "ask", source_ids: list[str] | N
             yield {"type": "token", "text": delta}
         if u is not None:
             usage = u
+    if failed and not answer:
+        note = f"The answer model is unavailable right now ({failed[:180]}). Nothing was written — the retrieved sources are below."
+        yield {"type": "token", "text": note}
+        yield {"type": "error", "message": note}
+        yield {"type": "done", "answer": note, "citations": citations(note, len(r.sources)), "usage": {},
+               "timings": {**r.timings, "total_ms": round((time.perf_counter() - t_all) * 1000, 1)},
+               "model": settings().llm_model.split(",")[0].strip()}
+        return
     timings = {
         **r.timings,
         "llm_first_token_ms": first_token_ms,
@@ -264,7 +351,18 @@ def answer_stream(question: str, mode_id: str = "ask", source_ids: list[str] | N
         "rate_limit_wait_ms": round(waited_s * 1000, 1) if waited_s else None,
         "total_ms": round((time.perf_counter() - t_all) * 1000, 1),
     }
-    yield {"type": "done", "answer": normalize_citations(answer), "citations": citations(answer, len(r.sources)), "usage": usage,
+    source_texts = [c.payload.get("text", "") for c in r.sources]
+    final = normalize_citations(answer)
+    cites = citations(final, len(r.sources), source_texts)
+    # The model forgot the [n] markers but the answer is still faithful to the
+    # sources: one small call adds them, so a formatting miss never costs a citation.
+    if not cites["markers"] and not cites["said_not_found"] and cites["attributed"] and "```" not in final:
+        t1 = time.perf_counter()
+        fixed = repair_citations(final, r)
+        if fixed:
+            timings["citation_repair_ms"] = round((time.perf_counter() - t1) * 1000, 1)
+            final, cites = fixed, citations(fixed, len(r.sources), source_texts)
+    yield {"type": "done", "answer": final, "citations": cites, "usage": usage,
            "timings": timings, "model": settings().llm_model.split(",")[0].strip()}
 
 

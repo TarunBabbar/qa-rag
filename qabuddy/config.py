@@ -88,6 +88,9 @@ class Settings:
     # ---- answer LLM ----
     llm_provider: str = field(default_factory=lambda: _env("LLM_PROVIDER", "openrouter"))
     llm_model: str = field(default_factory=lambda: _env("LLM_MODEL", "openai/gpt-oss-120b:free"))
+    # Free reasoning models can spend the whole completion budget on hidden reasoning
+    # and emit no answer at all. Capping it leaves room for content. 0 disables.
+    llm_reasoning_max_tokens: int = field(default_factory=lambda: _int("LLM_REASONING_MAX_TOKENS", 800))
     openrouter_api_key: str = field(default_factory=lambda: _env("OPENROUTER_API_KEY", ""))
     groq_api_key: str = field(default_factory=lambda: _env("GROQ_API_KEY", ""))
     openai_api_key: str = field(default_factory=lambda: _env("OPENAI_API_KEY", ""))

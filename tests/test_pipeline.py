@@ -255,3 +255,49 @@ def test_vtt_speaker_turns(tmp_path):
     chunks = chunk_transcript(p, src("transcript", tmp_path), "s.vtt")
     assert chunks[0].meta["meeting_date"] == "2026-04-14"
     assert "Ananya: Build 143 is green." in chunks[0].text and "Rahul:" in chunks[0].text
+
+
+# ------------------------------------------------------------- grounding
+# Grounding must not depend on the model's citation formatting, because the
+# free-model list rotates. These pin the content-based check.
+
+
+def test_identifiers_extracts_ids_and_paths():
+    from qabuddy.answer import identifiers
+
+    found = identifiers("QAB-76 breaks POST /room; see src/api/RestfulBooker.ts and TC-BOOK-001.")
+    assert set(found) >= {"QAB-76", "TC-BOOK-001", "src/api/RestfulBooker.ts"}
+
+
+def test_grounded_by_identifiers_even_without_markers():
+    from qabuddy.answer import citations
+
+    sources = ["Ticket QAB-76: unauthenticated POST /room creates a room. File src/api/RestfulBooker.ts"]
+    answer = "QAB-76 is the unauthenticated room creation bug; see src/api/RestfulBooker.ts."
+    c = citations(answer, 3, sources)
+    assert c["markers"] is False  # the model did not use [n]
+    assert c["attributed"] is True  # but the facts are in the sources
+    assert c["grounded"] is True
+
+
+def test_invented_identifiers_are_not_grounded():
+    from qabuddy.answer import citations
+
+    c = citations("Covered by QAB-999 in src/does/not/exist.ts.", 3, ["Ticket QAB-76: room creation."])
+    assert c["attributed"] is False
+    assert c["grounded"] is False
+    assert "QAB-999" in c["missing_identifiers"]
+
+
+def test_markers_still_ground_an_answer():
+    from qabuddy.answer import citations
+
+    c = citations("Blocked by the allowlist [2].", 3, ["unrelated"])
+    assert c["markers"] is True and c["grounded"] is True
+
+
+def test_grounding_without_sources_keeps_the_old_behaviour():
+    from qabuddy.answer import citations
+
+    assert citations("no markers here", 3)["grounded"] is False
+    assert citations("I couldn't find this in the knowledge base.", 3)["grounded"] is True

@@ -30,9 +30,10 @@ export default function Message({ msg, onOpen }) {
               <span className="spinner" /> {msg.status || 'Working'}
             </span>
           )}
-          {done?.citations?.grounded && !done.citations.said_not_found && <span className="badge ok">✓ grounded · {used.size} source{used.size === 1 ? '' : 's'} cited</span>}
+          {done?.citations?.grounded && !done.citations.said_not_found && used.size > 0 && <span className="badge ok">✓ grounded · {used.size} source{used.size === 1 ? '' : 's'} cited</span>}
+          {done?.citations?.grounded && !done.citations.said_not_found && used.size === 0 && <span className="badge ok">✓ grounded · checks against the sources</span>}
           {done?.citations?.said_not_found && <span className="badge warn">Not in the knowledge base</span>}
-          {done && !done.citations?.grounded && <span className="badge bad">⚠ no citations, verify before trusting</span>}
+          {done && !done.citations?.grounded && <span className="badge bad">⚠ unverified, check the sources</span>}
           {r?.low_confidence && <span className="badge warn">thin evidence</span>}
           {msg.recorded && <span className="badge info">recorded run · full pipeline</span>}
           {r?.demo_engine && <span className="badge info">demo · BM25 in browser</span>}

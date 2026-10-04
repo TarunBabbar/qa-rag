@@ -54,6 +54,11 @@ def _body(model: str, messages: list[dict], max_tokens: int, stream: bool) -> di
     body = {"model": model, "messages": messages, "temperature": 0.1, "max_tokens": max_tokens, "stream": stream}
     if "gpt-oss" in model and s.llm_provider in {"groq", "openai"}:
         body["reasoning_effort"] = "low"  # gpt-oss reasons before answering; low keeps tokens and latency down
+    # OpenRouter's unified `reasoning` control: without it a free reasoning model can
+    # consume the entire max_tokens on hidden reasoning and stream no answer at all.
+    # Models that do not reason ignore it.
+    if s.llm_provider == "openrouter" and s.llm_reasoning_max_tokens > 0:
+        body["reasoning"] = {"max_tokens": s.llm_reasoning_max_tokens}
     if stream:
         body["stream_options"] = {"include_usage": True}
     return body
