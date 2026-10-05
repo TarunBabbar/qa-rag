@@ -1,6 +1,6 @@
 """Regression tests for the ingestion and grounding logic.
 
-Each test pins a real bug found while building QABuddy, so it cannot quietly
+Each test pins a real bug found while building QA Copilot, so it cannot quietly
 come back. No Qdrant, Ollama or LLM needed: run with `pytest -q`.
 """
 

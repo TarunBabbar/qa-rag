@@ -24,7 +24,7 @@ export default function Message({ msg, onOpen }) {
       </div>
       <div className="a">
         <div className="a-head">
-          <b>QABuddy</b>
+          <b>QA Copilot</b>
           {msg.streaming && (
             <span className="badge info" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
               <span className="spinner" /> {msg.status || 'Working'}

@@ -144,21 +144,21 @@ export default function App() {
           )}
           {health && (
             <>
-              <span className={`pill ${h.pinecone ? 'ok' : 'bad'}`}>
+              <span className={`pill ${h.pinecone ? 'ok' : 'bad'}`} title="How many chunks are searchable right now">
                 <span className="dot" />
-                {h.vector_db || 'Pinecone'} · {(h.points ?? 0).toLocaleString()} chunks
+                {h.vector_db || 'Vector DB'} · {(h.points ?? 0).toLocaleString()} chunks
               </span>
-              <span className={`pill ${h.embed_provider ? 'ok' : 'bad'}`}>
+              <span className={`pill ${h.embed_provider ? 'ok' : 'bad'}`} title="The embedding model turns text into vectors">
                 <span className="dot" />
-                {h.embed_model} · {h.embed_dim}d
+                Embeddings · {h.embed_model} ({h.embed_dim}d)
               </span>
-              <span className={`pill ${rr.enabled ? 'ok' : ''}`}>
+              <span className={`pill ${rr.enabled ? 'ok' : ''}`} title="The reranker orders retrieved chunks by relevance to your question">
                 <span className="dot" />
-                {rr.enabled ? rr.model?.split('/').pop() : 'rerank off'}
+                Rerank · {rr.enabled ? rr.model : 'off'}
               </span>
-              <span className={`pill ${h.llm_configured ? 'ok' : 'bad'}`}>
+              <span className={`pill ${h.llm_configured ? 'ok' : 'bad'}`} title="The language model writes the answer from the retrieved chunks">
                 <span className="dot" />
-                {h.llm_model} · {h.llm_provider}
+                LLM · {h.llm_model} ({h.llm_provider})
               </span>
             </>
           )}
@@ -172,7 +172,7 @@ export default function App() {
 
         <div className="thread">
           <div className="thread-inner">
-            {bootErr && <div className="err">Could not reach the QABuddy API: {bootErr}</div>}
+            {bootErr && <div className="err">Could not reach the QA Copilot API: {bootErr}</div>}
             {msgs.length === 0 && (
               <div className="hero">
                 <h2>{mode && mode.id !== 'ask' ? `${mode.icon} ${mode.label}` : 'Ask your QA knowledge base'}</h2>
@@ -191,9 +191,50 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                <div className="pipeline">
-                  <span>exact ids</span>+<span>Qwen3 dense</span>+<span>code-aware BM25</span>→<span>RRF fusion</span>→
-                  <span>rerank</span>→<span>cited answer</span>
+                <div className="flow">
+                  <div className="flow-row">
+                    <span className="flow-label">How the knowledge base is built</span>
+                    <span className="flow-node">Jira + GitHub</span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-node">extract text</span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-node">split into chunks</span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-node">
+                      embed
+                      <small>{h.embed_model || 'embedding model'}{h.embed_dim ? ` · ${h.embed_dim}d` : ''}</small>
+                    </span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-node">
+                      store
+                      <small>{h.vector_db || 'vector database'}</small>
+                    </span>
+                  </div>
+                  <div className="flow-row">
+                    <span className="flow-label">How your question is answered</span>
+                    <span className="flow-node">your question</span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-node">embed it</span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-node">
+                      vector + keyword search
+                      <small>{h.vector_db || 'vector database'}</small>
+                    </span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-node">merge both rankings</span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-node">
+                      rerank
+                      <small>{rr.enabled ? rr.model : 'off'}</small>
+                    </span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-node">
+                      write the answer
+                      <small>{h.llm_model || 'LLM'}{h.llm_provider ? ` · ${h.llm_provider}` : ''}</small>
+                    </span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-node">answer + citations</span>
+                  </div>
                 </div>
                 {DEMO && meta?.recorded_at && (
                   <p style={{ marginTop: 18, fontSize: 12.5 }}>

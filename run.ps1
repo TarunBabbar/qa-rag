@@ -1,4 +1,4 @@
-# QABuddy on Windows. Requires Python 3.11+ and Node.
+# QA Copilot on Windows. Requires Python 3.11+ and Node.
 #   .\run.ps1            install, ingest if empty, build UI, serve
 #   .\run.ps1 ingest --full
 #   .\run.ps1 eval
@@ -31,7 +31,7 @@ switch ($cmd) {
     $points = (& $py -c "from qabuddy import store; print(store.count())" 2>$null)
     if (-not $points) { $points = 0 }
     if ([int]$points -eq 0) { Write-Host "Index is empty: ingesting..."; & $py -m qabuddy ingest }
-    Write-Host "QABuddy -> http://localhost:8300"
+    Write-Host "QA Copilot -> http://localhost:8300"
     & $py -m qabuddy serve
   }
 }

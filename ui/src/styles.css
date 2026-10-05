@@ -95,6 +95,15 @@ a { color: var(--accent-2); }
 .pipeline { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 26px 0 0; font-size: 11.5px; color: var(--muted); align-items: center; }
 .pipeline span { background: var(--card); border: 1px solid var(--edge); border-radius: 8px; padding: 4px 9px; font-family: var(--mono); }
 
+/* Two-lane flow: how the corpus is built, and how a question is answered.
+   Names the real pieces, but says what each one does. */
+.flow { margin: 28px auto 0; max-width: 780px; display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.flow-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.flow-label { flex: 0 0 100%; font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 1px; }
+.flow-node { background: var(--card); border: 1px solid var(--edge); border-radius: 9px; padding: 5px 10px; font-size: 12px; line-height: 1.35; color: var(--ink); }
+.flow-node small { display: block; font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+.flow-arrow { color: var(--muted); font-size: 12px; }
+
 /* ---------------------------------------------------------------- messages */
 .q { align-self: flex-end; max-width: 78%; background: var(--ink); color: #fff; border-radius: 16px 16px 4px 16px; padding: 10px 15px; font-size: 14.5px; white-space: pre-wrap; }
 .q small { display: block; opacity: .6; font-size: 11px; margin-bottom: 2px; }

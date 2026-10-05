@@ -10,7 +10,7 @@ export default function Sidebar({ modes, modeId, setMode, sources, selected, tog
       <div className="brand">
         <div className="logo">QA</div>
         <div>
-          <h1>QABuddy.ai</h1>
+          <h1>QA Copilot</h1>
           <p>Hybrid RAG for QA engineers</p>
         </div>
       </div>
@@ -55,11 +55,7 @@ export default function Sidebar({ modes, modeId, setMode, sources, selected, tog
         <div className="index-card">
           <div className="big">{health ? points.toLocaleString() : '…'}</div>
           <div className="row">
-            <span>chunks in Pinecone</span>
-            <span>{health?.embed_dim ? `${health.embed_dim}-d` : ''}</span>
-          </div>
-          <div className="row">
-            <span>{health?.embed_model}</span>
+            <span>chunks in the knowledge base</span>
           </div>
           {health?.indexed_at && (
             <div className="row">

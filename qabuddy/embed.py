@@ -45,7 +45,7 @@ def _headers() -> dict[str, str]:
     h = {"Authorization": f"Bearer {s.embed_key}"}
     if s.embed_provider == "openrouter":
         h["HTTP-Referer"] = "https://qabuddy.local"
-        h["X-Title"] = "QABuddy"
+        h["X-Title"] = "QA Copilot"
     return h
 
 

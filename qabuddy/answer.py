@@ -17,7 +17,7 @@ from .config import settings
 from .retrieve import Retrieval, retrieve
 from .text import approx_tokens, truncate_tokens
 
-SYSTEM = """You are QABuddy, the internal assistant for the QA team. Answer using ONLY the numbered sources in the user message.
+SYSTEM = """You are QA Copilot, the internal assistant for the QA team. Answer using ONLY the numbered sources in the user message.
 
 Rules:
 1. Cite every factual claim inline with the number of the source that supports it, in square brackets: [2] or [1][3]. Use no other citation format: no 【】 markers and no line ranges inside citations.

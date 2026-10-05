@@ -193,7 +193,7 @@ const demo = {
     return { ...c, ...(c.meta || {}) };
   },
   ingest: async () => {
-    throw new Error('Ingestion is disabled in the hosted demo. Run QABuddy locally to index your own data.');
+    throw new Error('Ingestion is disabled in the hosted demo. Run QA Copilot locally to index your own data.');
   },
   ingestStatus: async () => ({ running: false, stage: 'idle' }),
   async *chat({ question, mode: modeId, sources, history, signal }) {

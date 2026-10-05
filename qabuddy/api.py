@@ -34,7 +34,7 @@ from .config import ROOT, is_vercel, settings, sources
 from .manifest import load_manifest, source_counts
 from .retrieve import retrieve
 
-app = FastAPI(title="QABuddy.ai", version=__version__)
+app = FastAPI(title="QA Copilot", version=__version__)
 UI_DIST = ROOT / "ui" / "dist"
 
 _job = {"running": False, "stage": "idle", "done": 0, "total": 0, "started": None, "finished": None, "report": None, "error": None}
@@ -66,7 +66,7 @@ def health() -> dict:
             "embed_provider": s.embed_provider,
             "embed_model": s.embed_model,
             "embed_dim": s.embed_dim,
-            "vector_db": f"Pinecone ({s.pinecone_index})",
+            "vector_db": "Pinecone",
             "llm_provider": s.llm_provider,
             "llm_model": s.llm_model.split(",")[0].strip(),
             "llm_configured": llm.configured(),
@@ -255,4 +255,4 @@ def spa(path: str):
     index = UI_DIST / "index.html"
     if index.exists():
         return FileResponse(index)
-    return JSONResponse({"message": "QABuddy API is running. Build the UI with `cd ui && npm run build`."})
+    return JSONResponse({"message": "QA Copilot API is running. Build the UI with `cd ui && npm run build`."})

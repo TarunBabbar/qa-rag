@@ -1,4 +1,4 @@
-# QABuddy.ai: multi-source hybrid RAG for QA engineers
+# QA Copilot: multi-source hybrid RAG for QA engineers
 
 Ask one question, get one **cited** answer grounded in the team's Selenium and
 Playwright frameworks, test case repository, Jira bugs, requirement documents,
@@ -165,5 +165,5 @@ fallback list, retrieval knobs (`PREFETCH_K`, `RERANK_CANDIDATES`, `FINAL_K`,
 
 **Tarun Kumar Babbar License** — licensed to Tarun Kumar Babbar. See [LICENSE](LICENSE).
 
-Built on the QABuddy chapter-12 blueprint (multi-source hybrid RAG), reworked to run
+Built on the original chapter-12 blueprint (multi-source hybrid RAG), reworked to run
 entirely on hosted/free services.

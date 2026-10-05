@@ -27,7 +27,7 @@ def _endpoint() -> tuple[str, dict[str, str]]:
         return "https://openrouter.ai/api/v1", {
             "Authorization": f"Bearer {s.openrouter_api_key}",
             "HTTP-Referer": "https://qabuddy.local",
-            "X-Title": "QABuddy",
+            "X-Title": "QA Copilot",
         }
     if s.llm_provider == "ollama":
         return f"{s.ollama_url}/v1", {}

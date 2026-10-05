@@ -1,4 +1,4 @@
-# QABuddy seed data for the QAB Jira project.
+# QA Copilot seed data for the QAB Jira project.
 # Target application: restful-booker-platform (https://automationintesting.online)
 # Applied by tools/jira_seed.py (idempotent: matches on summary).
 

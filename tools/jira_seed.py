@@ -3,7 +3,7 @@
 Idempotent: an issue whose summary already exists in the project is skipped, so
 re-runs only create what is missing. Relationships become real Jira issue links
 ("relates to"); the referenced key is also written into the description as a
-fallback so QABuddy can trace it even without link traversal.
+fallback so QA Copilot can trace it even without link traversal.
 
     python tools/jira_seed.py [--dry-run]
 

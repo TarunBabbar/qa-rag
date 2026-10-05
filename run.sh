@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# QABuddy, locally, in one command. No local services to run: embeddings and the
+# QA Copilot, locally, in one command. No local services to run: embeddings and the
 # answer LLM are hosted on OpenRouter, vectors live in Pinecone, reranking is Jina.
 #
 #   ./run.sh            install deps, ingest if the index is empty, build the UI, serve
@@ -39,7 +39,7 @@ case "$cmd" in
     python_env; ui_build
     points=$("$PY" -c "from qabuddy import store; print(store.count())" 2>/dev/null || echo 0)
     if [ "${points:-0}" = "0" ]; then echo "Index is empty: ingesting (first run embeds everything)…"; "$PY" -m qabuddy ingest; fi
-    echo "QABuddy -> http://localhost:${PORT}"
+    echo "QA Copilot -> http://localhost:${PORT}"
     exec "$PY" -m qabuddy serve
     ;;
 esac
