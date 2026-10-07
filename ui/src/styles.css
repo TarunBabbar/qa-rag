@@ -82,6 +82,9 @@ a { color: var(--accent-2); }
 .pill.ok .dot { background: #3aa76d; }
 .pill.bad .dot { background: var(--bad); }
 .pill.demo { background: var(--accent-soft); border-color: #f2cdbf; color: var(--accent-2); font-family: var(--sans); font-weight: 600; }
+/* Teaches what the dots mean, right next to them. */
+.legend { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.legend .dot { width: 7px; height: 7px; border-radius: 50%; background: #3aa76d; }
 .spacer { flex: 1; }
 
 /* ---------------------------------------------------------------- empty state */

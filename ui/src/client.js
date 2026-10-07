@@ -71,7 +71,7 @@ const live = {
       if (!r.ok) throw new Error(d.detail || d.error || `HTTP ${r.status}`);
       if (d.retrieval) yield { type: 'retrieval', mode: d.mode, retrieval: d.retrieval };
       yield { type: 'token', text: d.answer || '' };
-      yield { type: 'done', answer: d.answer || '', citations: d.citations, usage: d.usage, timings: d.timings, model: d.model };
+      yield { type: 'done', answer: d.answer || '', citations: d.citations, usage: d.usage, timings: d.timings };
     }
   },
 };
@@ -239,7 +239,6 @@ const demo = {
       answer: text,
       citations: citationsOf(text, retrieval.sources.length),
       usage: out.usage || {},
-      model: out.model,
       timings: { ...retrieval.timings, llm_ms: +(performance.now() - t1).toFixed(1) },
     };
   },

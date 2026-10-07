@@ -53,32 +53,35 @@ def _startup() -> None:
 
 @app.get("/api/health")
 def health() -> dict:
+    """The four connections the UI shows, plus the index size.
+
+    Deliberately free of vendor and model names: which service sits behind each
+    connection is an implementation detail the user does not need to read.
+    """
     s = settings()
-    out = {"version": __version__, "pinecone": False, "points": 0}
+    points, vector_ok = 0, False
     try:
-        out["points"] = store.count()
-        out["pinecone"] = True
-    except Exception as e:
-        out["pinecone_error"] = str(e)
+        points = store.count()
+        vector_ok = True
+    except Exception:
+        pass
+    embed_ok = bool(s.embed_key) or s.embed_provider == "ollama"
+    rerank_on = bool(rerank.status().get("enabled"))
     m = load_manifest()
-    out.update(
-        {
-            "embed_provider": s.embed_provider,
-            "embed_model": s.embed_model,
-            "embed_dim": s.embed_dim,
-            "vector_db": "Pinecone",
-            "llm_provider": s.llm_provider,
-            "llm_model": s.llm_model.split(",")[0].strip(),
-            "llm_configured": llm.configured(),
-            "reranker": rerank.status(),
-            # ingestion only runs where the corpus lives; the hosted app is read-only
-            "ingest_enabled": not is_vercel(),
-            "jira_configured": s.jira_configured,
-            "indexed_at": m.get("updated_at"),
-            "index_model": m.get("embed_model"),
-        }
-    )
-    return out
+    return {
+        "version": __version__,
+        "points": points,
+        "connections": {
+            "vector_db": {"ok": vector_ok, "detail": f"{points:,} chunks" if vector_ok else "unreachable"},
+            "embeddings": {"ok": embed_ok, "detail": "text to vectors"},
+            "reranker": {"ok": rerank_on, "detail": "best evidence first" if rerank_on else "off"},
+            "llm": {"ok": llm.configured(), "detail": "writes the answer"},
+        },
+        # ingestion only runs where the corpus lives; the hosted app is read-only
+        "ingest_enabled": not is_vercel(),
+        "jira_configured": s.jira_configured,
+        "indexed_at": m.get("updated_at"),
+    }
 
 
 @app.get("/api/sources")

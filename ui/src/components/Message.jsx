@@ -108,7 +108,6 @@ export default function Message({ msg, onOpen }) {
                 tokens <b>{u.prompt_tokens}</b> in / <b>{u.completion_tokens}</b> out
               </span>
             )}
-            {done?.model && <span>{done.model}</span>}
             <span className="spacer" />
             {r && (
               <button className="ghost" onClick={() => setTrace(!trace)}>

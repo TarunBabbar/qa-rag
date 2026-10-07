@@ -8,7 +8,7 @@ export default function Trace({ retrieval, done, onOpen }) {
   const t = { ...(r.timings || {}), ...(done?.timings || {}) };
   const u = done?.usage || {};
   const stats = [
-    ['Embed (Qwen3)', ms(t.embed_ms)],
+    ['Embedding', ms(t.embed_ms)],
     ['Hybrid (RRF)', ms(t.search_ms)],
     ['Rerank', r.reranked ? ms(t.rerank_ms) : 'off'],
     ['LLM first token', ms(t.llm_first_token_ms)],
@@ -23,7 +23,7 @@ export default function Trace({ retrieval, done, onOpen }) {
       {r.demo_engine === 'bm25-browser' && (
         <p className="note">
           Demo engine: keyword (BM25) search running in your browser over the {r.candidates.length ? '' : 'demo '}corpus. The full
-          deployment adds Qwen3 dense vectors, RRF fusion and a reranker; the example questions replay recorded runs of
+          deployment adds dense vectors, rank fusion and a reranker; the example questions replay recorded runs of
           that full pipeline.
         </p>
       )}

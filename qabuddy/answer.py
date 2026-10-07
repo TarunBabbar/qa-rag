@@ -341,8 +341,7 @@ def answer_stream(question: str, mode_id: str = "ask", source_ids: list[str] | N
         yield {"type": "token", "text": note}
         yield {"type": "error", "message": note}
         yield {"type": "done", "answer": note, "citations": citations(note, len(r.sources)), "usage": {},
-               "timings": {**r.timings, "total_ms": round((time.perf_counter() - t_all) * 1000, 1)},
-               "model": settings().llm_model.split(",")[0].strip()}
+               "timings": {**r.timings, "total_ms": round((time.perf_counter() - t_all) * 1000, 1)}}
         return
     timings = {
         **r.timings,
@@ -363,7 +362,7 @@ def answer_stream(question: str, mode_id: str = "ask", source_ids: list[str] | N
             timings["citation_repair_ms"] = round((time.perf_counter() - t1) * 1000, 1)
             final, cites = fixed, citations(fixed, len(r.sources), source_texts)
     yield {"type": "done", "answer": final, "citations": cites, "usage": usage,
-           "timings": timings, "model": settings().llm_model.split(",")[0].strip()}
+           "timings": timings}
 
 
 def answer(question: str, mode_id: str = "ask", source_ids: list[str] | None = None, history: list[dict] | None = None) -> dict:

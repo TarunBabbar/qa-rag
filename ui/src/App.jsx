@@ -117,7 +117,15 @@ export default function App() {
   };
 
   const h = health || {};
-  const rr = h.reranker || {};
+  const connections = h.connections || {};
+  // The four moving parts, named by what they do rather than by which service
+  // provides them. Green means that connection answered.
+  const CONNECTIONS = [
+    { key: 'vector_db', label: 'Vector DB', hint: 'stores the document vectors and searches them' },
+    { key: 'embeddings', label: 'Embedding model', hint: 'turns text into vectors before it is stored or searched' },
+    { key: 'reranker', label: 'Reranker', hint: 'orders the retrieved chunks so the best evidence comes first' },
+    { key: 'llm', label: 'LLM', hint: 'writes the answer from the retrieved chunks' },
+  ];
   return (
     <div className="app">
       <Sidebar
@@ -144,22 +152,23 @@ export default function App() {
           )}
           {health && (
             <>
-              <span className={`pill ${h.pinecone ? 'ok' : 'bad'}`} title="How many chunks are searchable right now">
-                <span className="dot" />
-                {h.vector_db || 'Vector DB'} · {(h.points ?? 0).toLocaleString()} chunks
+              <span className="legend">
+                <span className="dot" /> connected
               </span>
-              <span className={`pill ${h.embed_provider ? 'ok' : 'bad'}`} title="The embedding model turns text into vectors">
-                <span className="dot" />
-                Embeddings · {h.embed_model} ({h.embed_dim}d)
-              </span>
-              <span className={`pill ${rr.enabled ? 'ok' : ''}`} title="The reranker orders retrieved chunks by relevance to your question">
-                <span className="dot" />
-                Rerank · {rr.enabled ? rr.model : 'off'}
-              </span>
-              <span className={`pill ${h.llm_configured ? 'ok' : 'bad'}`} title="The language model writes the answer from the retrieved chunks">
-                <span className="dot" />
-                LLM · {h.llm_model} ({h.llm_provider})
-              </span>
+              {CONNECTIONS.map(({ key, label, hint }) => {
+                const c = connections[key] || {};
+                return (
+                  <span
+                    key={key}
+                    className={`pill ${c.ok ? 'ok' : 'bad'}`}
+                    title={`${c.ok ? 'Connected' : 'Not connected'} — ${hint}`}
+                  >
+                    <span className="dot" />
+                    {label}
+                    {c.detail ? ` · ${c.detail}` : ''}
+                  </span>
+                );
+              })}
             </>
           )}
           <span className="spacer" />
@@ -201,36 +210,39 @@ export default function App() {
                     <span className="flow-node">split into chunks</span>
                     <span className="flow-arrow">→</span>
                     <span className="flow-node">
-                      embed
-                      <small>{h.embed_model || 'embedding model'}{h.embed_dim ? ` · ${h.embed_dim}d` : ''}</small>
+                      Embedding model
+                      <small>text → vectors</small>
                     </span>
                     <span className="flow-arrow">→</span>
                     <span className="flow-node">
-                      store
-                      <small>{h.vector_db || 'vector database'}</small>
+                      Vector DB
+                      <small>stores the vectors</small>
                     </span>
                   </div>
                   <div className="flow-row">
                     <span className="flow-label">How your question is answered</span>
                     <span className="flow-node">your question</span>
                     <span className="flow-arrow">→</span>
-                    <span className="flow-node">embed it</span>
+                    <span className="flow-node">
+                      Embedding model
+                      <small>question → vector</small>
+                    </span>
                     <span className="flow-arrow">→</span>
                     <span className="flow-node">
-                      vector + keyword search
-                      <small>{h.vector_db || 'vector database'}</small>
+                      Vector DB
+                      <small>vector + keyword search</small>
                     </span>
                     <span className="flow-arrow">→</span>
                     <span className="flow-node">merge both rankings</span>
                     <span className="flow-arrow">→</span>
                     <span className="flow-node">
-                      rerank
-                      <small>{rr.enabled ? rr.model : 'off'}</small>
+                      Reranker
+                      <small>best evidence first</small>
                     </span>
                     <span className="flow-arrow">→</span>
                     <span className="flow-node">
-                      write the answer
-                      <small>{h.llm_model || 'LLM'}{h.llm_provider ? ` · ${h.llm_provider}` : ''}</small>
+                      LLM
+                      <small>writes the answer</small>
                     </span>
                     <span className="flow-arrow">→</span>
                     <span className="flow-node">answer + citations</span>
